@@ -16,7 +16,7 @@ import time
 from collections.abc import Sequence
 from typing import Any, Protocol
 
-import httpx
+import httpx2
 import openai
 from pydantic import BaseModel
 from tenacity import Retrying, retry_if_exception_type, stop_after_attempt, wait_exponential
@@ -52,7 +52,7 @@ class LLMClient(Protocol):
 
 
 class OpenAICompatClient:
-    def __init__(self, cfg: LLMConfig, http_client: httpx.Client | None = None) -> None:
+    def __init__(self, cfg: LLMConfig, http_client: httpx2.Client | None = None) -> None:
         self._cfg = cfg
         self._client = openai.OpenAI(
             base_url=cfg.base_url,

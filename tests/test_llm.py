@@ -1,6 +1,6 @@
 import json
 
-import httpx
+import httpx2
 import pytest
 from pydantic import BaseModel
 
@@ -67,16 +67,16 @@ def test_structured_gives_up_after_repair() -> None:
 def test_openai_client_sends_config_and_retries_5xx() -> None:
     bodies: list[dict[str, object]] = []
 
-    def handler(request: httpx.Request) -> httpx.Response:
+    def handler(request: httpx2.Request) -> httpx2.Response:
         bodies.append(json.loads(request.content))
         if len(bodies) == 1:
-            return httpx.Response(500, json={"error": {"message": "boom"}})
-        return httpx.Response(200, json=completion('{"answer": "z"}'))
+            return httpx2.Response(500, json={"error": {"message": "boom"}})
+        return httpx2.Response(200, json=completion('{"answer": "z"}'))
 
     cfg = LLMConfig(
         model="m", temperature=0.0, max_tokens=64, retry_backoff_s=0.01, extra_body={"think": False}
     )
-    http = httpx.Client(transport=httpx.MockTransport(handler))
+    http = httpx2.Client(transport=httpx2.MockTransport(handler))
     resp = OpenAICompatClient(cfg, http_client=http).complete(
         MSG, response_format={"type": "json_object"}
     )
@@ -88,6 +88,6 @@ def test_openai_client_sends_config_and_retries_5xx() -> None:
 
 def test_openai_client_raises_llm_error_after_retries() -> None:
     cfg = LLMConfig(max_retries=2, retry_backoff_s=0.01)
-    http = httpx.Client(transport=httpx.MockTransport(lambda r: httpx.Response(503)))
+    http = httpx2.Client(transport=httpx2.MockTransport(lambda r: httpx2.Response(503)))
     with pytest.raises(LLMError):
         OpenAICompatClient(cfg, http_client=http).complete(MSG)
