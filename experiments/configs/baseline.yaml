@@ -19,12 +19,10 @@ retrieval:
   method: dense            # dense | bm25 | hybrid
   top_k: 5                 # chunks given to the LLM
 llm:
-  model: qwen3:8b          # replaced by the winner of the model_* runs (Task 17)
+  model: ministral-3:14b   # chosen in docs/decisions/001-llm-choice.md
   temperature: 0.0
   max_tokens: 512
-  extra_body:
-    reasoning_effort: none # qwen3 thinks by default (~280 extra tokens/answer); Ollama's
-                           # OpenAI endpoint ignores `think: false`, this switch works
+  extra_body: {}           # ministral has no thinking mode (qwen3 needed reasoning_effort: none)
 generation:
   prompt_template: prompts/baseline_answer.md
 eval:

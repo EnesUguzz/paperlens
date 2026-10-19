@@ -1,0 +1,7 @@
+extends: ../baseline.yaml
+chunking:
+  chunk_size: 400          # double: recall up "for free", prompt tokens up for real
+  chunk_overlap: 80
+eval:
+  run_name: chunk_fixed_400
+  reference_run: baseline

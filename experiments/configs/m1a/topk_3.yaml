@@ -1,0 +1,6 @@
+extends: ../baseline.yaml
+retrieval:
+  top_k: 3                 # less context: cheaper, may miss multi-part evidence
+eval:
+  run_name: topk_3
+  reference_run: baseline

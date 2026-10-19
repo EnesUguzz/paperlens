@@ -1,0 +1,8 @@
+extends: ../baseline.yaml
+retrieval:
+  method: hybrid
+  candidate_k: 30
+  rrf_k: 10                # top ranks of each retriever dominate
+eval:
+  run_name: retr_hybrid_rrf10
+  reference_run: baseline

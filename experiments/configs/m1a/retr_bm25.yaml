@@ -1,0 +1,6 @@
+extends: ../baseline.yaml
+retrieval:
+  method: bm25             # keywords only: strong on dataset/metric names
+eval:
+  run_name: retr_bm25
+  reference_run: baseline

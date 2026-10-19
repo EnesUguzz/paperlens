@@ -19,6 +19,13 @@ def test_deep_merge_keeps_unrelated_keys() -> None:
     assert merged == {"a": {"x": 1, "y": 3}, "b": 1}
 
 
+def test_empty_mapping_resets_inherited_mapping() -> None:
+    merged = deep_merge(
+        {"llm": {"extra_body": {"reasoning_effort": "none"}}}, {"llm": {"extra_body": {}}}
+    )
+    assert merged == {"llm": {"extra_body": {}}}
+
+
 def test_extends_chain(tmp_path: Path) -> None:
     (tmp_path / "base.yaml").write_text("retrieval:\n  top_k: 5\n  method: dense\n")
     (tmp_path / "child.yaml").write_text("extends: base.yaml\nretrieval:\n  method: bm25\n")

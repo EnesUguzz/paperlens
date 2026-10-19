@@ -1,0 +1,8 @@
+extends: ../baseline.yaml
+retrieval:
+  method: hybrid
+  candidate_k: 30          # each retriever's list before fusion
+  rrf_k: 60                # paper default: blends both rankings evenly
+eval:
+  run_name: retr_hybrid_rrf60
+  reference_run: baseline

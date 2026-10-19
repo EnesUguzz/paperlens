@@ -1,0 +1,8 @@
+extends: ../baseline.yaml
+llm:
+  model: qwen3:8b          # the original M1a baseline model, kept for the comparison table
+  extra_body:
+    reasoning_effort: none
+eval:
+  run_name: model_qwen3_8b
+  reference_run: baseline

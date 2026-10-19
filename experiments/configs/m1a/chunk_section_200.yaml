@@ -1,0 +1,8 @@
+extends: ../baseline.yaml
+chunking:
+  strategy: section        # paragraph-aligned, never crosses a section
+  chunk_size: 200
+  chunk_overlap: 0         # unused by 'section'
+eval:
+  run_name: chunk_section_200
+  reference_run: baseline

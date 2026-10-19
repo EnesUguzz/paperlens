@@ -1,0 +1,7 @@
+extends: ../baseline.yaml
+chunking:
+  chunk_size: 100          # half the baseline: sharper matches, more boundary cuts
+  chunk_overlap: 20
+eval:
+  run_name: chunk_fixed_100
+  reference_run: baseline

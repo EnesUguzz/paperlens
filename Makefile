@@ -1,6 +1,6 @@
 CONFIG ?= experiments/configs/baseline.yaml
 
-.PHONY: setup test lint format download explain-config check-gpu index eval ablation summarize
+.PHONY: setup test lint format download explain-config check-gpu index eval ablation models summarize
 
 setup:
 	uv sync --extra ml
@@ -34,7 +34,12 @@ eval:
 	uv run paperlens eval --config $(CONFIG)
 
 ablation:
+	uv run paperlens eval --config experiments/configs/baseline.yaml
 	for f in experiments/configs/m1a/*.yaml; do uv run paperlens eval --config $$f || exit 1; done
+	uv run paperlens summarize --out evals/results/SUMMARY.md
+
+models:
+	for f in experiments/configs/m1a_models/*.yaml; do uv run paperlens eval --config $$f || exit 1; done
 	uv run paperlens summarize --out evals/results/SUMMARY.md
 
 summarize:

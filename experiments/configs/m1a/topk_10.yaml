@@ -1,0 +1,6 @@
+extends: ../baseline.yaml
+retrieval:
+  top_k: 10                # more context: watch prompt_tokens_max and answer_f1 together
+eval:
+  run_name: topk_10
+  reference_run: baseline

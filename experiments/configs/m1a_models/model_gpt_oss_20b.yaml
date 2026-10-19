@@ -1,0 +1,8 @@
+extends: ../baseline.yaml
+llm:
+  model: gpt-oss:20b       # OpenAI open weights, MoE (~3.6B active): big but cheap per token?
+  extra_body:
+    reasoning_effort: low  # gpt-oss always reasons; 'low' is its smallest setting (checked before the run)
+eval:
+  run_name: model_gpt_oss_20b
+  reference_run: baseline

@@ -1,0 +1,8 @@
+extends: ../baseline.yaml
+llm:
+  model: llama3.1:8b       # 2024 reference point: how much did two years of releases buy?
+  extra_body:
+    reasoning_effort: none # what this run actually sent (inherited; no effect on non-thinking models)
+eval:
+  run_name: model_llama3_1_8b
+  reference_run: baseline

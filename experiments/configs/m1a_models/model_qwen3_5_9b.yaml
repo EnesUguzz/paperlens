@@ -1,0 +1,8 @@
+extends: ../baseline.yaml
+llm:
+  model: qwen3.5:9b        # newer Qwen generation at a similar size: does the generation matter?
+  extra_body:
+    reasoning_effort: none # what this run used (inherited from the qwen3 baseline at the time)
+eval:
+  run_name: model_qwen3_5_9b
+  reference_run: baseline

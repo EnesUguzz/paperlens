@@ -20,9 +20,11 @@ EXTENDS_KEY = "extends"
 
 
 def deep_merge(base: dict[str, Any], override: dict[str, Any]) -> dict[str, Any]:
+    """Recursively merge override into base. An empty mapping (`{}`) in the override
+    replaces the inherited one, so a child file can clear e.g. `llm.extra_body`."""
     merged = dict(base)
     for key, value in override.items():
-        if isinstance(value, dict) and isinstance(merged.get(key), dict):
+        if isinstance(value, dict) and value and isinstance(merged.get(key), dict):
             merged[key] = deep_merge(merged[key], value)
         else:
             merged[key] = value

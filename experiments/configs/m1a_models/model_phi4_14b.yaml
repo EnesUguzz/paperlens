@@ -1,0 +1,8 @@
+extends: ../baseline.yaml
+llm:
+  model: phi4:14b          # Microsoft, trained heavily on synthetic reasoning data
+  extra_body:
+    reasoning_effort: none # what this run actually sent (inherited; no effect on non-thinking models)
+eval:
+  run_name: model_phi4_14b
+  reference_run: baseline
