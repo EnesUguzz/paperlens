@@ -1,7 +1,17 @@
 import pytest
 
-from paperlens.domain import Answer, AnswerType, Chunk, PipelineResult, Question, ScoredChunk, Usage
+from paperlens.domain import (
+    Answer,
+    AnswerType,
+    Chunk,
+    PipelineResult,
+    Question,
+    Reference,
+    ScoredChunk,
+    Usage,
+)
 from paperlens.evals.aggregate import aggregate
+from paperlens.evals.answer_metrics import gold_type
 from paperlens.evals.records import build_record
 
 CHUNK = ScoredChunk(
@@ -67,3 +77,49 @@ def test_aggregate(sample_questions: list[Question]) -> None:
 
 def test_aggregate_empty() -> None:
     assert aggregate([], [1]) == {"n_questions": 0.0}
+
+
+WIDE_CHUNK = ScoredChunk(
+    chunk=Chunk(
+        chunk_id="P::c1",
+        paper_id="P",
+        section="S",
+        text="wide chunk",
+        paragraph_ids=["1234.5678::s0p1", "1234.5678::s0p0"],
+    ),
+    score=1.0,
+)
+
+
+def test_gold_type_is_majority_with_unanswerable_tie_break() -> None:
+    def ref(t: AnswerType) -> Reference:
+        return Reference(answer_type=t, answer_text="x", evidence_ids=[])
+
+    assert gold_type([ref("extractive"), ref("extractive"), ref("yes_no")]) == "extractive"
+    assert gold_type([ref("unanswerable"), ref("yes_no")]) == "unanswerable"
+
+
+def test_evidence_ceiling_reflects_chunk_granularity(sample_questions: list[Question]) -> None:
+    q1 = sample_questions[0]  # gold evidence: s0p1
+    exact = build_record(q1, result("q1", "extractive", "SQuAD", ["1234.5678::s0p1"]), [1])
+    assert exact.evidence_f1_ceiling == 1.0
+    wide = result("q1", "extractive", "SQuAD", ["1234.5678::s0p1", "1234.5678::s0p0"])
+    wide = wide.model_copy(update={"retrieved": [WIDE_CHUNK]})
+    rec = build_record(q1, wide, [1])
+    assert rec.evidence_f1_ceiling == pytest.approx(
+        2 / 3
+    )  # best possible when citing a 2-paragraph chunk
+    assert rec.gold_type == "extractive"
+
+
+def test_aggregate_reports_gold_type_buckets_and_ceiling(sample_questions: list[Question]) -> None:
+    q1, q2, _ = sample_questions
+    records = [
+        build_record(q1, result("q1", "extractive", "SQuAD", ["1234.5678::s0p1"]), [1]),
+        build_record(q2, result("q2", "yes_no", "No", []), [1]),
+    ]
+    m = aggregate(records, [1])
+    # q2's best-matching reference is yes_no, but its gold type (tie) is unanswerable
+    assert m["n.yes_no"] == 1 and m["n.gold.unanswerable"] == 1
+    assert m["answer_f1.gold.unanswerable"] == 1.0
+    assert m["evidence_f1_ceiling"] == pytest.approx(1.0)

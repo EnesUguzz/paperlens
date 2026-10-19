@@ -3,6 +3,9 @@
 Purpose: The numbers that go to MLflow, the report and the ablation table. Names use
 dots (MLflow-safe), e.g. 'answer_f1.extractive', 'retrieval.recall_at_5'.
 Flow: list[EvalRecord] -> aggregate() -> metrics.json / MLflow / report.md.
+Per-type keys: 'answer_f1.<type>' is the official QASPER bucket (type of the annotator
+whose answer matched best, so it depends on the prediction); 'answer_f1.gold.<type>'
+buckets by the question's majority gold type and is the one to compare models on.
 Params: eval.k_values.
 Try: Watch latency_p95_ms rather than the mean: one slow repair round per 20 questions
 barely moves the mean but is exactly what users feel.
@@ -36,12 +39,18 @@ def aggregate(records: Sequence[EvalRecord], k_values: Sequence[int]) -> dict[st
         "n_questions": float(len(records)),
         "answer_f1": _mean([r.answer_f1 for r in records]),
         "evidence_f1": _mean([r.evidence_f1 for r in records]),
+        "evidence_f1_ceiling": _mean([r.evidence_f1_ceiling for r in records]),
     }
     for answer_type in get_args(AnswerType):
         subset = [r for r in records if r.best_ref_type == answer_type]
         metrics[f"n.{answer_type}"] = float(len(subset))
         if subset:
             metrics[f"answer_f1.{answer_type}"] = _mean([r.answer_f1 for r in subset])
+        # gold-type buckets do not move when a model changes its answers (see gold_type)
+        by_gold = [r for r in records if r.gold_type == answer_type]
+        metrics[f"n.gold.{answer_type}"] = float(len(by_gold))
+        if by_gold:
+            metrics[f"answer_f1.gold.{answer_type}"] = _mean([r.answer_f1 for r in by_gold])
 
     scored = [r.retrieval for r in records if r.retrieval is not None]
     metrics["retrieval.n"] = float(len(scored))

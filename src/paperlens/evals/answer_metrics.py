@@ -82,6 +82,23 @@ def prediction_text(answer: Answer) -> str:
     return answer.text
 
 
+def gold_type(references: Sequence[Reference]) -> AnswerType:
+    """The question's own type: the annotators' majority; a tie involving 'unanswerable'
+    follows is_gold_unanswerable, other ties take the first annotator's type.
+
+    Unlike BestMatch.ref_type (the official per-type bucket, which depends on what the
+    model predicted), this does not move when a model changes its answer."""
+    if is_gold_unanswerable(references):
+        return "unanswerable"
+    counts = Counter(r.answer_type for r in references if r.answer_type != "unanswerable")
+    top = max(counts.values())
+    return next(
+        r.answer_type
+        for r in references
+        if r.answer_type != "unanswerable" and counts[r.answer_type] == top
+    )
+
+
 def is_gold_unanswerable(references: Sequence[Reference]) -> bool:
     """At least half of the annotators said unanswerable (ties count as unanswerable)."""
     unanswerable = sum(r.answer_type == "unanswerable" for r in references)
