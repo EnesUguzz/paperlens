@@ -1,0 +1,63 @@
+from pathlib import Path
+
+import pytest
+from pydantic import ValidationError
+
+from paperlens.config.explain import iter_fields, render_markdown
+from paperlens.config.loader import deep_merge, load_config
+from paperlens.config.models import AppConfig, ChunkingConfig, RetrievalConfig
+
+
+def test_defaults_are_valid() -> None:
+    cfg = AppConfig()
+    assert cfg.retrieval.method == "dense"
+    assert cfg.chunking.chunk_size == 200
+
+
+def test_deep_merge_keeps_unrelated_keys() -> None:
+    merged = deep_merge({"a": {"x": 1, "y": 2}, "b": 1}, {"a": {"y": 3}})
+    assert merged == {"a": {"x": 1, "y": 3}, "b": 1}
+
+
+def test_extends_chain(tmp_path: Path) -> None:
+    (tmp_path / "base.yaml").write_text("retrieval:\n  top_k: 5\n  method: dense\n")
+    (tmp_path / "child.yaml").write_text("extends: base.yaml\nretrieval:\n  method: bm25\n")
+    cfg = load_config(tmp_path / "child.yaml")
+    assert cfg.retrieval.method == "bm25"
+    assert cfg.retrieval.top_k == 5
+
+
+def test_circular_extends_is_rejected(tmp_path: Path) -> None:
+    (tmp_path / "a.yaml").write_text("extends: b.yaml\n")
+    (tmp_path / "b.yaml").write_text("extends: a.yaml\n")
+    with pytest.raises(ValueError, match="circular"):
+        load_config(tmp_path / "a.yaml")
+
+
+def test_unknown_key_is_rejected(tmp_path: Path) -> None:
+    (tmp_path / "bad.yaml").write_text("retrieval:\n  topk: 5\n")
+    with pytest.raises(ValidationError):
+        load_config(tmp_path / "bad.yaml")
+
+
+def test_overlap_must_be_smaller_than_size() -> None:
+    with pytest.raises(ValidationError):
+        ChunkingConfig(chunk_size=50, chunk_overlap=50)
+
+
+def test_candidate_k_must_cover_top_k() -> None:
+    with pytest.raises(ValidationError):
+        RetrievalConfig(top_k=10, candidate_k=5)
+
+
+def test_chunks_must_fit_embedder_window() -> None:
+    with pytest.raises(ValidationError, match="max_seq_length"):
+        AppConfig(chunking={"chunk_size": 800}, embedding={"max_seq_length": 512})
+
+
+def test_explain_lists_nested_fields() -> None:
+    paths = [d.path for d in iter_fields(AppConfig())]
+    assert "chunking.chunk_size" in paths
+    assert "llm.model" in paths
+    table = render_markdown(AppConfig())
+    assert "| `retrieval.top_k` | `5` |" in table
