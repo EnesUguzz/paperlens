@@ -1,0 +1,41 @@
+CONFIG ?= experiments/configs/baseline.yaml
+
+.PHONY: setup test lint format download explain-config check-gpu index eval ablation summarize
+
+setup:
+	uv sync --extra ml
+	uv run pre-commit install
+
+test:
+	uv run pytest
+
+format:
+	uv run ruff format .
+	uv run ruff check --fix .
+
+lint:
+	uv run ruff check .
+	uv run ruff format --check .
+	uv run mypy src
+
+download:
+	uv run paperlens download --split validation
+
+explain-config:
+	uv run paperlens explain-config --config $(CONFIG) --out docs/CONFIG.md
+
+check-gpu:
+	uv run paperlens check-gpu
+
+index:
+	uv run paperlens index --config $(CONFIG)
+
+eval:
+	uv run paperlens eval --config $(CONFIG)
+
+ablation:
+	for f in experiments/configs/m1a/*.yaml; do uv run paperlens eval --config $$f || exit 1; done
+	uv run paperlens summarize --out evals/results/SUMMARY.md
+
+summarize:
+	uv run paperlens summarize --out evals/results/SUMMARY.md
