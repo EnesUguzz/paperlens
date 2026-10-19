@@ -93,6 +93,23 @@ def summarize(
     typer.echo(table)
 
 
+@app.command()
+def rescore(
+    results_dir: Path = DEFAULT_RESULTS,
+    run: Annotated[str | None, typer.Option("--run", help="One run; default: all")] = None,
+) -> None:
+    """Recompute records, metrics and reports of saved runs without calling the LLM."""
+    from paperlens.evals.rescore import rescore_run
+
+    dirs = [results_dir / run] if run else sorted(d for d in results_dir.iterdir() if d.is_dir())
+    # references first, so every rescored report compares against rescored numbers
+    dirs.sort(key=lambda d: d.name != "baseline")
+    for d in dirs:
+        if (d / "records.jsonl").exists():
+            result = rescore_run(d)
+            typer.echo(f"{d.name}: answer_f1={result.metrics.get('answer_f1', 0):.3f}")
+
+
 @app.command("check-gpu")
 def check_gpu() -> None:
     """Verify torch sees the GPU and can run fp16."""

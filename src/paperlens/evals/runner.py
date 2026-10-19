@@ -5,6 +5,7 @@ Purpose: The experiment loop: data -> index (cached) -> pipeline -> per-question
 Flow: AppConfig -> run_experiment() -> evals/results/<run_name>/{params.json,
 metrics.json, records.jsonl, report.md} + MLflow run.
 Params: every section; notably data.sample_size, eval.k_values, eval.reference_run.
+Provenance (prompt/data/git/model hashes) is added as meta.* params by evals/provenance.py.
 Try: Run the same config twice: metrics should match exactly (temperature 0, fixed seed).
 If they do not, the server is not deterministic - worth knowing before comparing runs.
 """
@@ -19,6 +20,7 @@ import structlog
 from paperlens.config.models import AppConfig
 from paperlens.domain import Paper, Question
 from paperlens.evals.aggregate import aggregate
+from paperlens.evals.provenance import collect_meta
 from paperlens.evals.records import EvalRecord, build_record
 from paperlens.evals.report import RunResult, load_run, render_report, save_run
 from paperlens.evals.tracking import log_to_mlflow
@@ -80,9 +82,11 @@ def run_experiment(
 
     metrics = aggregate(records, k_values)
     metrics["index.num_chunks"] = float(len(bundle.chunks))
+    params = flatten(cfg.model_dump(mode="json"))
+    params.update(collect_meta(cfg, query_server=llm is None))  # a fake LLM has no server
     result = RunResult(
         run_name=cfg.eval.run_name,
-        params=flatten(cfg.model_dump(mode="json")),
+        params=params,
         metrics=metrics,
         records=records,
     )

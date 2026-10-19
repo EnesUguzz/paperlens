@@ -8,6 +8,9 @@
 | `aggregate.py` | records -> flat metric dict (means, per-type, refusal, latency, tokens) |
 | `report.py` | Markdown report: changed params vs reference, metric deltas, worst examples |
 | `summary.py` | one table across all runs (the ablation table for the README) |
+| `stats.py` | paired bootstrap CI for run-vs-run answer-F1 differences |
+| `provenance.py` | meta.* params: prompt/data hashes, git sha, model digest |
+| `rescore.py` | recompute metrics/reports of saved runs without the LLM (`paperlens rescore`) |
 | `tracking.py` | MLflow logging |
 | `runner.py` | wires everything for one YAML config |
 

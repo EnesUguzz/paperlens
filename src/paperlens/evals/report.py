@@ -18,7 +18,7 @@ from typing import Any
 
 from paperlens.evals.records import EvalRecord
 
-IGNORED_PARAM_PREFIXES = ("eval.",)
+IGNORED_PARAM_PREFIXES = ("eval.", "meta.git_")  # git keys change on every commit
 TRUNCATION_WARN_RATIO = 0.95
 PARAMS_FILE, METRICS_FILE, RECORDS_FILE = "params.json", "metrics.json", "records.jsonl"
 
