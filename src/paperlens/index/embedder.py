@@ -68,7 +68,9 @@ class SentenceTransformerEmbedder:
         if cfg.device.startswith("cuda"):
             self._model.half()  # fp16 halves VRAM, no measurable quality loss for retrieval
         self._model.max_seq_length = cfg.max_seq_length
-        dim = self._model.get_sentence_embedding_dimension()
+        # sentence-transformers renamed this method; support both old and new releases
+        get_dim = getattr(self._model, "get_embedding_dimension", None)
+        dim = get_dim() if get_dim else self._model.get_sentence_embedding_dimension()
         if dim is None:
             raise ValueError(f"{cfg.model_name} does not report an embedding dimension")
         self.dim = int(dim)

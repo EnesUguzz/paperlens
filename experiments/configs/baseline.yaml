@@ -1,0 +1,33 @@
+# Baseline: naive RAG. Every other experiment `extends` this file and changes ONE thing.
+# Run: make eval CONFIG=experiments/configs/baseline.yaml
+data:
+  split: validation        # tune on validation; test is touched once, at the very end
+  sample_size: 250         # questions per run (dev_small); null = all
+  seed: 13                 # same questions in every run -> runs are comparable
+chunking:
+  strategy: fixed          # fixed | section
+  chunk_size: 200          # words (~260 tokens)
+  chunk_overlap: 40        # words shared by neighbouring chunks
+  include_section_title: true
+  include_captions: true
+embedding:
+  model_name: BAAI/bge-m3
+  batch_size: 32
+  device: cuda
+  max_seq_length: 1024     # must exceed chunk_size * 1.5 tokens (checked)
+retrieval:
+  method: dense            # dense | bm25 | hybrid
+  top_k: 5                 # chunks given to the LLM
+llm:
+  model: qwen3:8b          # replaced by the winner of the model_* runs (Task 17)
+  temperature: 0.0
+  max_tokens: 512
+  extra_body:
+    reasoning_effort: none # qwen3 thinks by default (~280 extra tokens/answer); Ollama's
+                           # OpenAI endpoint ignores `think: false`, this switch works
+generation:
+  prompt_template: prompts/baseline_answer.md
+eval:
+  experiment_name: m1a
+  run_name: baseline
+  reference_run: null      # the baseline is everyone else's reference

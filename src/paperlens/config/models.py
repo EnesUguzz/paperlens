@@ -298,8 +298,9 @@ class LLMConfig(_Section):
         default_factory=dict,
         description=(
             "What: extra JSON fields sent with every request (server-specific switches, e.g. "
-            "turning off a model's thinking mode, e.g. {'think': false} on Ollama). "
-            "Effect: thinking on = many more completion tokens and seconds per answer."
+            "turning off a model's thinking mode: {'reasoning_effort': 'none'} on Ollama's "
+            "OpenAI endpoint, which ignores 'think'). Effect: qwen3 with thinking on used "
+            "~280 extra completion tokens for a one-line JSON answer (~50x)."
         ),
     )
 
