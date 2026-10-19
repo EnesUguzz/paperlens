@@ -1,4 +1,4 @@
-# Run `baseline`
+# Run `model_qwen3_8b`
 
 No reference run: showing absolute metrics only.
 
@@ -9,18 +9,27 @@ No reference run: showing absolute metrics only.
 | answer_f1 | 0.403 | - | - |
 | answer_f1.abstractive | 0.239 | - | - |
 | answer_f1.extractive | 0.461 | - | - |
+| answer_f1.gold.abstractive | 0.306 | - | - |
+| answer_f1.gold.extractive | 0.449 | - | - |
+| answer_f1.gold.unanswerable | 0.332 | - | - |
+| answer_f1.gold.yes_no | 0.500 | - | - |
 | answer_f1.unanswerable | 0.318 | - | - |
 | answer_f1.yes_no | 0.517 | - | - |
 | completion_tokens_mean | 43.948 | - | - |
 | context_words_mean | 998.848 | - | - |
 | error_rate | 0.000 | - | - |
 | evidence_f1 | 0.265 | - | - |
+| evidence_f1_ceiling | 0.471 | - | - |
 | false_refusal_rate | 0.047 | - | - |
 | index.num_chunks | 6676.000 | - | - |
 | latency_p50_ms | 684.335 | - | - |
 | latency_p95_ms | 972.827 | - | - |
 | n.abstractive | 58.000 | - | - |
 | n.extractive | 141.000 | - | - |
+| n.gold.abstractive | 58.000 | - | - |
+| n.gold.extractive | 131.000 | - | - |
+| n.gold.unanswerable | 37.000 | - | - |
+| n.gold.yes_no | 24.000 | - | - |
 | n.unanswerable | 22.000 | - | - |
 | n.yes_no | 29.000 | - | - |
 | n_questions | 250.000 | - | - |
@@ -30,8 +39,8 @@ No reference run: showing absolute metrics only.
 | retrieval.mrr | 0.552 | - | - |
 | retrieval.n | 230.000 | - | - |
 | retrieval.ndcg_at_1 | 0.409 | - | - |
-| retrieval.ndcg_at_3 | 0.560 | - | - |
-| retrieval.ndcg_at_5 | 0.649 | - | - |
+| retrieval.ndcg_at_3 | 0.492 | - | - |
+| retrieval.ndcg_at_5 | 0.527 | - | - |
 | retrieval.recall_at_1 | 0.335 | - | - |
 | retrieval.recall_at_3 | 0.603 | - | - |
 | retrieval.recall_at_5 | 0.703 | - | - |

@@ -45,5 +45,11 @@
     10
   ],
   "eval.worst_examples": 5,
-  "eval.log_every": 25
+  "eval.log_every": 25,
+  "meta.prompt_sha256": "b9e0dd367503dd55",
+  "meta.data_sha256": "089781b91c337d34",
+  "meta.git_sha": "pre-provenance",
+  "meta.git_dirty": "pre-provenance",
+  "meta.llm_digest": "not recorded",
+  "meta.server_version": "not recorded"
 }

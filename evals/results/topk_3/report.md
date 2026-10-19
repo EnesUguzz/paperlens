@@ -13,18 +13,27 @@
 | answer_f1 | 0.403 | 0.419 | -0.016 |
 | answer_f1.abstractive | 0.215 | 0.225 | -0.010 |
 | answer_f1.extractive | 0.429 | 0.473 | -0.044 |
+| answer_f1.gold.abstractive | 0.278 | 0.302 | -0.024 |
+| answer_f1.gold.extractive | 0.421 | 0.464 | -0.044 |
+| answer_f1.gold.unanswerable | 0.525 | 0.411 | +0.114 |
+| answer_f1.gold.yes_no | 0.420 | 0.464 | -0.044 |
 | answer_f1.unanswerable | 0.640 | 0.458 | +0.182 |
 | answer_f1.yes_no | 0.443 | 0.486 | -0.043 |
 | completion_tokens_mean | 49.716 | 51.800 | -2.084 |
 | context_words_mean | 599.680 | 998.848 | -399.168 |
 | error_rate | 0.000 | 0.000 | +0.000 |
 | evidence_f1 | 0.300 | 0.297 | +0.004 |
+| evidence_f1_ceiling | 0.445 | 0.471 | -0.026 |
 | false_refusal_rate | 0.075 | 0.042 | +0.033 |
 | index.num_chunks | 6676.000 | 6676.000 | +0.000 |
 | latency_p50_ms | 882.162 | 1042.795 | -160.633 |
 | latency_p95_ms | 1521.302 | 1850.713 | -329.412 |
 | n.abstractive | 57.000 | 55.000 | +2.000 |
 | n.extractive | 143.000 | 144.000 | -1.000 |
+| n.gold.abstractive | 58.000 | 58.000 | +0.000 |
+| n.gold.extractive | 131.000 | 131.000 | +0.000 |
+| n.gold.unanswerable | 37.000 | 37.000 | +0.000 |
+| n.gold.yes_no | 24.000 | 24.000 | +0.000 |
 | n.unanswerable | 25.000 | 24.000 | +1.000 |
 | n.yes_no | 25.000 | 27.000 | -2.000 |
 | n_questions | 250.000 | 250.000 | +0.000 |
@@ -34,7 +43,7 @@
 | retrieval.mrr | 0.533 | 0.552 | -0.020 |
 | retrieval.n | 230.000 | 230.000 | +0.000 |
 | retrieval.ndcg_at_1 | 0.409 | 0.409 | +0.000 |
-| retrieval.ndcg_at_3 | 0.560 | 0.560 | +0.000 |
+| retrieval.ndcg_at_3 | 0.492 | 0.492 | +0.000 |
 | retrieval.recall_at_1 | 0.335 | 0.335 | +0.000 |
 | retrieval.recall_at_3 | 0.603 | 0.603 | +0.000 |
 

@@ -4,53 +4,64 @@
 
 | Parameter | Reference | This run |
 |---|---|---|
-| `llm.model` | qwen3:8b | llama3.1:8b |
+| `llm.extra_body` | {} | None |
+| `llm.extra_body.reasoning_effort` | None | none |
+| `llm.model` | ministral-3:14b | llama3.1:8b |
 
 ## Metrics
 
 | Metric | This run | Reference | Delta |
 |---|---|---|---|
-| answer_f1 | 0.326 | 0.403 | -0.077 |
-| answer_f1.abstractive | 0.267 | 0.239 | +0.028 |
-| answer_f1.extractive | 0.441 | 0.461 | -0.020 |
-| answer_f1.unanswerable | 0.091 | 0.318 | -0.227 |
-| answer_f1.yes_no | 0.046 | 0.517 | -0.471 |
-| completion_tokens_mean | 38.088 | 43.948 | -5.860 |
+| answer_f1 | 0.326 | 0.419 | -0.093 |
+| answer_f1.abstractive | 0.267 | 0.225 | +0.042 |
+| answer_f1.extractive | 0.441 | 0.473 | -0.032 |
+| answer_f1.gold.abstractive | 0.302 | 0.302 | -0.001 |
+| answer_f1.gold.extractive | 0.438 | 0.464 | -0.026 |
+| answer_f1.gold.unanswerable | 0.145 | 0.411 | -0.266 |
+| answer_f1.gold.yes_no | 0.052 | 0.464 | -0.411 |
+| answer_f1.unanswerable | 0.091 | 0.458 | -0.367 |
+| answer_f1.yes_no | 0.046 | 0.486 | -0.440 |
+| completion_tokens_mean | 38.088 | 51.800 | -13.712 |
 | context_words_mean | 998.848 | 998.848 | +0.000 |
 | error_rate | 0.000 | 0.000 | +0.000 |
-| evidence_f1 | 0.244 | 0.265 | -0.020 |
-| false_refusal_rate | 0.023 | 0.047 | -0.023 |
+| evidence_f1 | 0.244 | 0.297 | -0.052 |
+| evidence_f1_ceiling | 0.471 | 0.471 | +0.000 |
+| false_refusal_rate | 0.023 | 0.042 | -0.019 |
 | index.num_chunks | 6676.000 | 6676.000 | +0.000 |
-| latency_p50_ms | 615.905 | 684.335 | -68.431 |
-| latency_p95_ms | 892.121 | 972.827 | -80.706 |
-| n.abstractive | 60.000 | 58.000 | +2.000 |
-| n.extractive | 141.000 | 141.000 | +0.000 |
-| n.unanswerable | 22.000 | 22.000 | +0.000 |
-| n.yes_no | 27.000 | 29.000 | -2.000 |
+| latency_p50_ms | 615.905 | 1042.795 | -426.890 |
+| latency_p95_ms | 892.121 | 1850.713 | -958.592 |
+| n.abstractive | 60.000 | 55.000 | +5.000 |
+| n.extractive | 141.000 | 144.000 | -3.000 |
+| n.gold.abstractive | 58.000 | 58.000 | +0.000 |
+| n.gold.extractive | 131.000 | 131.000 | +0.000 |
+| n.gold.unanswerable | 37.000 | 37.000 | +0.000 |
+| n.gold.yes_no | 24.000 | 24.000 | +0.000 |
+| n.unanswerable | 22.000 | 24.000 | -2.000 |
+| n.yes_no | 27.000 | 27.000 | +0.000 |
 | n_questions | 250.000 | 250.000 | +0.000 |
-| prompt_tokens_max | 1989.000 | 2042.000 | -53.000 |
-| prompt_tokens_mean | 1641.536 | 1676.652 | -35.116 |
-| refusal_recall | 0.054 | 0.162 | -0.108 |
+| prompt_tokens_max | 1989.000 | 2577.000 | -588.000 |
+| prompt_tokens_mean | 1641.536 | 2228.868 | -587.332 |
+| refusal_recall | 0.054 | 0.270 | -0.216 |
 | retrieval.mrr | 0.552 | 0.552 | +0.000 |
 | retrieval.n | 230.000 | 230.000 | +0.000 |
 | retrieval.ndcg_at_1 | 0.409 | 0.409 | +0.000 |
-| retrieval.ndcg_at_3 | 0.560 | 0.560 | +0.000 |
-| retrieval.ndcg_at_5 | 0.649 | 0.649 | +0.000 |
+| retrieval.ndcg_at_3 | 0.492 | 0.492 | +0.000 |
+| retrieval.ndcg_at_5 | 0.527 | 0.527 | +0.000 |
 | retrieval.recall_at_1 | 0.335 | 0.335 | +0.000 |
 | retrieval.recall_at_3 | 0.603 | 0.603 | +0.000 |
 | retrieval.recall_at_5 | 0.703 | 0.703 | +0.000 |
 
 ## Biggest regressions
 
+- **Do the errors of the model reflect linguistic similarity between different L1s?** (`007b13f05d234d37966d1aa7d85b5fd78564ff45`, answer_f1 1.00 -> 0.00)
+  - gold: Unanswerable
+  - predicted: The errors of the model do not necessarily reflect linguistic similarity between different L1s.
+  - top context: [Introduction] includes texts produced by adults and children, as well as a spoken subset. The aforementioned Portuguese learner corpora contain very useful data for research, particularly for Native Language Identification (NLI), a task that has received much attention in recent years. NLI is the t
+
 - **Did they use a crowdsourcing platform for annotations?** (`0ba3ea93eef5660a79ea3c26c6a270eac32dfa4c`, answer_f1 1.00 -> 0.00)
   - gold: No | Unanswerable
   - predicted: The morphosyntactic annotation was performed automatically.
   - top context: [Evaluation] within this study. The senses used for annotation are coarse-grained – with one sense covering a range of related usages. Each word has between two and four senses. To employ the method described in previous section, the NCP senses have been manually mapped to fine-grained plWordNet syn
-
-- **Did they used dataset from another domain for evaluation?** (`1dac4bc5af239024566fcb0f43bb9ff1c248ecec`, answer_f1 1.00 -> 0.00)
-  - gold: No | No
-  - predicted: Tencent News
-  - top context: [Results] Pointer-Gen+ARL-SEN achieve comparable fluency performance to Pointer-Gen and Pointer-Gen+RL-ROUGE. Test set headlines achieve the best performance among all models, but the difference is not statistically significant. Also, we observe that fine-tuning on sensational headlines will hurt th
 
 - **What languages pairs are used in machine translation?** (`2f901dab6b757e12763b23ae8b37ae2e517a2271`, answer_f1 1.00 -> 0.00)
   - gold: German–English | German–English

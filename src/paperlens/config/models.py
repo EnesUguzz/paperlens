@@ -85,9 +85,10 @@ class ChunkingConfig(_Section):
         ge=5,
         description=(
             "What: target chunk length in words (~1.3 tokens per word). Typical: 100-400. "
-            "Effect: higher -> more context per chunk, Recall@k usually rises but Evidence-F1 "
-            "can drop (evidence is diluted) and prompt tokens/latency grow. Lower -> sharper "
-            "matches, but answers may be split across chunks."
+            "Effect: higher -> more context per chunk, Recall@k rises (M1a: 0.70 -> 0.86 at "
+            "400) and prompt tokens/latency grow; Evidence-F1 drops mechanically because a cited "
+            "chunk counts all its paragraphs (compare evidence_f1 to evidence_f1_ceiling). "
+            "Lower -> sharper matches, but answers may be split across chunks."
         ),
     )
     chunk_overlap: int = Field(
