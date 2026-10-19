@@ -1,0 +1,43 @@
+from pathlib import Path
+
+from paperlens.config.models import AppConfig
+from paperlens.domain import Paper
+from paperlens.index.embedder import HashingEmbedder
+from paperlens.index.store import build_or_load, index_key
+
+
+def config(tmp_path: Path, **chunking: object) -> AppConfig:
+    return AppConfig(
+        data={"data_dir": tmp_path},
+        embedding={"model_name": "hashing"},
+        chunking={"chunk_size": 10, "chunk_overlap": 2, **chunking},
+    )
+
+
+def test_second_call_is_a_cache_hit(tmp_path: Path, sample_paper: Paper) -> None:
+    cfg = config(tmp_path)
+    first = build_or_load(cfg, [sample_paper], HashingEmbedder())
+    first.dense.close()
+    second = build_or_load(cfg, [sample_paper], HashingEmbedder())
+    assert not first.cache_hit and second.cache_hit
+    assert [c.chunk_id for c in second.chunks] == [c.chunk_id for c in first.chunks]
+    assert second.dense.count() == len(second.chunks)
+    second.dense.close()
+
+
+def test_interrupted_build_is_rebuilt(tmp_path: Path, sample_paper: Paper) -> None:
+    cfg = config(tmp_path)
+    first = build_or_load(cfg, [sample_paper], HashingEmbedder())
+    first.dense.close()
+    # simulate Ctrl-C before the chunks file (the commit marker) was written
+    (tmp_path / "index" / index_key(cfg) / "chunks.jsonl").unlink()
+    again = build_or_load(cfg, [sample_paper], HashingEmbedder())
+    assert not again.cache_hit
+    again.dense.close()
+
+
+def test_key_depends_only_on_index_settings(tmp_path: Path) -> None:
+    base = config(tmp_path)
+    assert index_key(base) != index_key(config(tmp_path, chunk_size=12))
+    retrieval = base.retrieval.model_copy(update={"top_k": 9})
+    assert index_key(base) == index_key(base.model_copy(update={"retrieval": retrieval}))
