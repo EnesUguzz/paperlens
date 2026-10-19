@@ -8,3 +8,7 @@ data/
 mlruns/
 mlflow.db
 *.part
+
+# IDE
+.idea/
+.vscode/
