@@ -22,6 +22,12 @@ def test_ndcg() -> None:
     assert ndcg_at_k(RANKED, GOLD, 3) == pytest.approx(0.6934, abs=1e-4)
 
 
+def test_ndcg_counts_each_gold_paragraph_once_with_overlapping_chunks() -> None:
+    # fixed chunks overlap, so one gold paragraph can appear in several retrieved chunks
+    assert ndcg_at_k([["p1"], ["p1"]], {"p1"}, 2) == pytest.approx(1.0)
+    assert ndcg_at_k([["x"], ["p1"], ["p1", "p2"]], {"p1", "p2"}, 3) <= 1.0
+
+
 def test_best_over_references_skips_evidence_free_refs() -> None:
     refs = [
         Reference(answer_type="extractive", answer_text="a", evidence_ids=["p3", "p4"]),

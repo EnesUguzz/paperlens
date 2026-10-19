@@ -30,12 +30,17 @@ def mrr(ranked: Sequence[Sequence[str]], gold: set[str]) -> float:
 
 
 def ndcg_at_k(ranked: Sequence[Sequence[str]], gold: set[str], k: int) -> float:
-    """Binary relevance per chunk; the ideal ranking has min(k, |gold|) relevant chunks."""
-    dcg = sum(
-        1.0 / math.log2(rank + 1)
-        for rank, chunk in enumerate(ranked[:k], start=1)
-        if gold & set(chunk)
-    )
+    """Binary relevance per chunk, but a chunk only counts if it brings a gold paragraph
+    not seen in an earlier chunk. Overlapping (fixed) chunks would otherwise credit one
+    paragraph several times and push nDCG above 1. At most min(k, |gold|) chunks can be
+    relevant, which is exactly the ideal ranking below, so the score stays in [0, 1]."""
+    seen: set[str] = set()
+    dcg = 0.0
+    for rank, chunk in enumerate(ranked[:k], start=1):
+        new_gold = (gold & set(chunk)) - seen
+        if new_gold:
+            dcg += 1.0 / math.log2(rank + 1)
+            seen |= new_gold
     ideal = sum(1.0 / math.log2(rank + 1) for rank in range(1, min(k, len(gold)) + 1))
     return dcg / ideal
 
