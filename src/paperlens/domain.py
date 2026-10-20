@@ -68,6 +68,13 @@ class Usage(BaseModel):
     completion_tokens: int = 0
     latency_ms: float = 0.0
 
+    def __add__(self, other: Usage) -> Usage:
+        return Usage(
+            prompt_tokens=self.prompt_tokens + other.prompt_tokens,
+            completion_tokens=self.completion_tokens + other.completion_tokens,
+            latency_ms=self.latency_ms + other.latency_ms,
+        )
+
 
 class Answer(BaseModel):
     question_id: str
@@ -84,3 +91,4 @@ class PipelineResult(BaseModel):
     answer: Answer
     retrieved: list[ScoredChunk]
     retrieval_ms: float
+    query_error: str | None = None  # query-transform failure (pipeline fell back to the question)

@@ -2,10 +2,11 @@ from pathlib import Path
 
 import pytest
 
-from paperlens.domain import Chunk, PipelineResult, Question, Reference, ScoredChunk
+from paperlens.domain import Chunk, PipelineResult, Question, Reference, ScoredChunk, Usage
 from paperlens.llm.client import LLMError
 from paperlens.llm.fake import FakeLLM
 from paperlens.pipelines.baseline import NO_PASSAGES, BaselinePipeline
+from paperlens.retrieval.query import QueryPlan
 
 TEMPLATE = (Path(__file__).resolve().parents[1] / "prompts" / "baseline_answer.md").read_text()
 QUESTION = Question(
@@ -30,8 +31,12 @@ CHUNKS = [
 class StubRetriever:
     def __init__(self, result: list[ScoredChunk]) -> None:
         self.result = result
+        self.plans: list[QueryPlan | None] = []
 
-    def retrieve(self, query: str, paper_id: str | None = None) -> list[ScoredChunk]:
+    def retrieve(
+        self, query: str, paper_id: str | None = None, plan: QueryPlan | None = None
+    ) -> list[ScoredChunk]:
+        self.plans.append(plan)
         return self.result
 
 
@@ -75,3 +80,31 @@ def test_empty_retrieval_says_so_in_prompt() -> None:
 def test_template_without_placeholders_is_rejected() -> None:
     with pytest.raises(ValueError, match="question"):
         BaselinePipeline(StubRetriever([]), FakeLLM([]), "no placeholders", {})
+
+
+class StubTransformer:
+    def plan(self, question: str, title: str) -> QueryPlan:
+        return QueryPlan(
+            original=question,
+            dense=[question, "hypothetical"],
+            sparse=[question],
+            usage=Usage(prompt_tokens=7, completion_tokens=3, latency_ms=4.0),
+            error="LLMError: boom",
+        )
+
+
+def test_pipeline_adds_plan_usage_and_error() -> None:
+    llm = FakeLLM(['{"answer_type": "extractive", "answer": "SQuAD", "evidence": [1]}'])
+    retriever = StubRetriever(CHUNKS)
+    pipe = BaselinePipeline(retriever, llm, TEMPLATE, {"P": "Tiny"}, StubTransformer())
+    result = pipe.run(QUESTION)
+    assert result.query_error == "LLMError: boom"
+    assert result.answer.usage.prompt_tokens == FakeLLM.PROMPT_TOKENS + 7
+    assert result.answer.usage.completion_tokens == FakeLLM.COMPLETION_TOKENS + 3
+    assert retriever.plans[0] is not None and retriever.plans[0].dense[1] == "hypothetical"
+
+
+def test_default_pipeline_has_no_query_error_and_normal_usage() -> None:
+    _, result = run('{"answer_type": "extractive", "answer": "x", "evidence": [1]}')
+    assert result.query_error is None
+    assert result.answer.usage.prompt_tokens == FakeLLM.PROMPT_TOKENS

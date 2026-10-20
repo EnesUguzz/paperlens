@@ -28,8 +28,8 @@ from paperlens.index.embedder import Embedder, build_embedder
 from paperlens.index.store import build_or_load, index_key
 from paperlens.ingestion.qasper import download_split, load_split, sample_questions
 from paperlens.llm.client import LLMClient, OpenAICompatClient
-from paperlens.pipelines.baseline import BaselinePipeline, Pipeline
-from paperlens.retrieval.retriever import Retriever
+from paperlens.pipelines.baseline import Pipeline
+from paperlens.pipelines.factory import build_pipeline
 
 log = structlog.get_logger(__name__)
 REPORT_FILE = "report.md"
@@ -69,11 +69,8 @@ def run_experiment(
     bundle = build_or_load(cfg, papers, embedder or build_embedder(cfg.embedding))
     k_values = [k for k in cfg.eval.k_values if k <= cfg.retrieval.top_k]
     try:
-        pipeline = BaselinePipeline(
-            Retriever(cfg.retrieval, bundle.dense, bundle.sparse),
-            llm or OpenAICompatClient(cfg.llm),
-            cfg.generation.prompt_template.read_text(encoding="utf-8"),
-            {p.paper_id: p.title for p in papers},
+        pipeline = build_pipeline(
+            cfg, bundle, llm or OpenAICompatClient(cfg.llm), {p.paper_id: p.title for p in papers}
         )
         log.info("run start", run=cfg.eval.run_name, questions=len(sample), index=index_key(cfg))
         records = evaluate(sample, pipeline, k_values, cfg.eval.log_every)

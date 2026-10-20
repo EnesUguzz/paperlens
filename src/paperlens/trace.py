@@ -25,7 +25,7 @@ from paperlens.index.embedder import Embedder, build_embedder
 from paperlens.index.store import IndexBundle, build_or_load
 from paperlens.ingestion.qasper import download_split, load_split, sample_questions
 from paperlens.llm.client import LLMClient, LLMResponse, Message, OpenAICompatClient
-from paperlens.pipelines.baseline import BaselinePipeline
+from paperlens.pipelines.factory import build_pipeline
 from paperlens.retrieval.retriever import Retriever
 
 METHODS: tuple[str, ...] = get_args(RetrievalConfig.model_fields["method"].annotation)
@@ -71,12 +71,7 @@ def trace_question(
         ).retrieve(question.question, paper_id=question.paper_id)
         for method in METHODS
     }
-    pipeline = BaselinePipeline(
-        Retriever(cfg.retrieval, bundle.dense, bundle.sparse),
-        llm or _NoLLM(),
-        cfg.generation.prompt_template.read_text(encoding="utf-8"),
-        {paper.paper_id: paper.title},
-    )
+    pipeline = build_pipeline(cfg, bundle, llm or _NoLLM(), {paper.paper_id: paper.title})
     prompt = pipeline.build_prompt(question, rankings[cfg.retrieval.method])
     result: PipelineResult | None = None
     record: EvalRecord | None = None

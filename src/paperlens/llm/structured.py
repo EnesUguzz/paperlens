@@ -42,14 +42,6 @@ def extract_json(text: str) -> str:
     return text[start : end + 1] if start != -1 and end > start else text
 
 
-def _add(a: Usage, b: Usage) -> Usage:
-    return Usage(
-        prompt_tokens=a.prompt_tokens + b.prompt_tokens,
-        completion_tokens=a.completion_tokens + b.completion_tokens,
-        latency_ms=a.latency_ms + b.latency_ms,
-    )
-
-
 def structured_call[T: BaseModel](
     llm: LLMClient, messages: Sequence[Message], schema: type[T]
 ) -> tuple[T, Usage]:
@@ -62,7 +54,7 @@ def structured_call[T: BaseModel](
     last_error = ""
     for _ in range(1 + REPAIR_ATTEMPTS):
         reply = llm.complete(conversation, response_format=response_format)
-        total = _add(total, reply.usage)
+        total = total + reply.usage
         try:
             return schema.model_validate_json(extract_json(strip_reasoning(reply.content))), total
         except ValidationError as err:

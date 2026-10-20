@@ -5,7 +5,12 @@ from paperlens.config.models import AppConfig
 from paperlens.domain import Paper, Question
 from paperlens.evals.runner import flatten, run_experiment
 from paperlens.index.embedder import HashingEmbedder
+from paperlens.index.store import build_or_load
 from paperlens.llm.fake import FakeLLM
+from paperlens.pipelines.baseline import format_context, render_prompt
+from paperlens.pipelines.factory import build_pipeline
+from paperlens.retrieval.query import QueryPlan
+from paperlens.retrieval.retriever import Retriever
 
 REPO = Path(__file__).resolve().parents[1]
 
@@ -47,3 +52,35 @@ def test_run_experiment_end_to_end(
     assert metrics["n_questions"] == 3 and metrics["answer_f1"] == 1.0
     assert "retrieval.recall_at_5" not in metrics  # 5 > top_k is skipped
     assert result.params["retrieval.method"] == "hybrid"
+
+
+def test_factory_baseline_prompt_is_unchanged(
+    tmp_path: Path, sample_paper: Paper, sample_questions: list[Question]
+) -> None:
+    cfg = AppConfig(
+        data={"data_dir": tmp_path / "data", "sample_size": None},
+        chunking={"strategy": "section", "chunk_size": 20, "chunk_overlap": 0},
+        embedding={"model_name": "hashing"},
+        retrieval={"method": "bm25", "top_k": 2},
+        generation={"prompt_template": REPO / "prompts" / "baseline_answer.md"},
+    )
+    bundle = build_or_load(cfg, [sample_paper], HashingEmbedder())
+    try:
+        titles = {sample_paper.paper_id: sample_paper.title}
+        pipe = build_pipeline(cfg, bundle, FakeLLM([]), titles)
+        question = sample_questions[0]
+        retrieved = Retriever(cfg.retrieval, bundle.dense, bundle.sparse).retrieve(
+            question.question, paper_id=question.paper_id
+        )
+        expected = render_prompt(
+            cfg.generation.prompt_template.read_text(encoding="utf-8"),
+            title=sample_paper.title,
+            context=format_context(retrieved),
+            question=question.question,
+        )
+        assert pipe.build_prompt(question, retrieved) == expected
+        plan = pipe.plan(question)
+        assert plan == QueryPlan.identity(question.question)
+        assert pipe.retrieve(question, plan) == retrieved
+    finally:
+        bundle.dense.close()
