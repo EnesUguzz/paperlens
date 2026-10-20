@@ -1,7 +1,7 @@
 """Build indexes once per (split, text source, chunking, embedding) and reuse them.
 
-Purpose: Embedding ~7k chunks (validation split at fixed 200 words) takes minutes; experiments that only change retrieval or
-LLM settings must not pay that again. The cache key hashes exactly the settings that
+Purpose: Embedding ~7k chunks (validation split at fixed 200 words) takes minutes;
+experiments that only change retrieval or LLM settings must not pay that again. The cache key hashes exactly the settings that
 change the index, nothing else.
 Flow: papers + AppConfig -> build_or_load() -> IndexBundle(chunks, dense, sparse)
 -> retrieval/retriever.py.

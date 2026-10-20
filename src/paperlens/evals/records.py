@@ -15,7 +15,7 @@ from __future__ import annotations
 from collections.abc import Sequence
 from itertools import combinations
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 from paperlens.domain import AnswerType, PipelineResult, Question, Reference
 from paperlens.evals.answer_metrics import (
@@ -84,7 +84,7 @@ class EvalRecord(BaseModel):
     retrieved_chunk_ids: list[str]
     cited_chunk_ids: list[str]
     # defaults keep records saved before these fields existed loadable
-    cited_paragraph_ids: list[str] = []
+    cited_paragraph_ids: list[str] = Field(default_factory=list)
     answer_words: int = 0
     gold_recall: float = 0.0
     doc_hit_rate: float | None = None

@@ -97,7 +97,7 @@ def _rescore_single_citation(
     tmp_path: Path,
     sample_paper: Paper,
     sample_questions: list[Question],
-    extra: dict[str, list[str]],
+    cited_paragraph_ids: list[str] | None,
 ) -> float:
     """Run once, then rewrite the run so q1 cites one 2-paragraph chunk; return rescored evidence_f1."""
     cfg = AppConfig(
@@ -129,7 +129,12 @@ def _rescore_single_citation(
     chunk_file.write_text(wide.model_dump_json() + "\n", encoding="utf-8")
     records_file = run_dir / "records.jsonl"
     raw = json.loads(records_file.read_text(encoding="utf-8").splitlines()[0])
-    raw.update(retrieved_chunk_ids=["P::c1"], cited_chunk_ids=["P::c1"], **extra)
+    raw.update(retrieved_chunk_ids=["P::c1"], cited_chunk_ids=["P::c1"])
+    assert "cited_paragraph_ids" in raw  # new code saves it, so the old format must be forced
+    if cited_paragraph_ids is None:
+        del raw["cited_paragraph_ids"]  # an old record: only chunk ids were saved
+    else:
+        raw["cited_paragraph_ids"] = cited_paragraph_ids
     records_file.write_text(json.dumps(raw) + "\n", encoding="utf-8")
     run = rescore_run(run_dir, dataset=dataset)
     return run.records[0].evidence_f1
@@ -138,14 +143,12 @@ def _rescore_single_citation(
 def test_rescore_uses_cited_paragraph_ids_when_present(
     tmp_path: Path, sample_paper: Paper, sample_questions: list[Question]
 ) -> None:
-    f1 = _rescore_single_citation(
-        tmp_path, sample_paper, sample_questions, {"cited_paragraph_ids": ["1234.5678::s0p1"]}
-    )
+    f1 = _rescore_single_citation(tmp_path, sample_paper, sample_questions, ["1234.5678::s0p1"])
     assert f1 == 1.0
 
 
 def test_rescore_expands_chunks_for_old_records_without_the_field(
     tmp_path: Path, sample_paper: Paper, sample_questions: list[Question]
 ) -> None:
-    f1 = _rescore_single_citation(tmp_path, sample_paper, sample_questions, {})
+    f1 = _rescore_single_citation(tmp_path, sample_paper, sample_questions, None)
     assert f1 == pytest.approx(2 / 3)
