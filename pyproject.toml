@@ -49,6 +49,8 @@ packages = ["src/paperlens"]
 [tool.ruff]
 line-length = 100
 target-version = "py313"
+force-exclude = true
+extend-exclude = ["tests/official"]  # vendored third-party evaluator, kept byte-for-byte
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "B", "UP", "SIM", "RUF"]
