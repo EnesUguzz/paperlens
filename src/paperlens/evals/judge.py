@@ -97,7 +97,10 @@ def rule_verdict(
         return make(True, "exact match with a reference answer")
     if record.error:
         return make(False, "the pipeline failed on this question")
-    if record.gold_unanswerable:
+    # only when every reference is unanswerable: with a mixed set an answer can still match an
+    # answerable reference (any reference counts), so it goes on to the LLM; a refusal there
+    # already matched the 'Unanswerable' reference exactly (rule above)
+    if all(t == UNANSWERABLE_TEXT for t in record.gold_texts):
         return make(record.refused, "gold is unanswerable: correct iff the model refused")
     if record.refused:
         return make(False, "the model refused a question that has an answer")
@@ -197,6 +200,14 @@ def judge_run(run_dir: Path, cfg: JudgeConfig, llm: LLMClient) -> dict[str, floa
         for qid, v in current_verdicts(records, load_verdicts(run_dir)).items()
         if v.method == "llm" and v.judge_model == cfg.model and v.prompt_sha256 == prompt_sha
     }
+    # rules come first (as in rescored_verdicts): a cached LLM verdict for a record the rules
+    # now decide is dropped, so judge and rescore always report the same judge.* metrics
+    ruled = {
+        r.question_id: v
+        for r in records
+        if (v := rule_verdict(r, cfg.model, prompt_sha)) is not None
+    }
+    reusable = {qid: v for qid, v in reusable.items() if qid not in ruled}
     verdicts: dict[str, JudgeVerdict] = {}
     # only LLM verdicts are cached; rule verdicts are free and follow the current rules
     # the file is rewritten one verdict at a time (cached ones first come back in order), so
@@ -210,7 +221,9 @@ def judge_run(run_dir: Path, cfg: JudgeConfig, llm: LLMClient) -> dict[str, floa
             if r.question_id in reusable:
                 verdicts[r.question_id] = reusable[r.question_id]
                 continue
-            verdicts[r.question_id] = judge_record(r, llm, template, cfg.model, prompt_sha)
+            verdicts[r.question_id] = ruled.get(r.question_id) or judge_record(
+                r, llm, template, cfg.model, prompt_sha
+            )
             out.write(verdicts[r.question_id].model_dump_json() + "\n")
             out.flush()
     metrics = judge_metrics(records, verdicts)

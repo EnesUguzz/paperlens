@@ -7,7 +7,7 @@ from paperlens.config.models import AppConfig
 from paperlens.domain import Chunk, Paper, Question
 from paperlens.evals.provenance import collect_meta
 from paperlens.evals.report import changed_params
-from paperlens.evals.rescore import rescore_run, unflatten
+from paperlens.evals.rescore import MissingIndexError, rescore_run, unflatten
 from paperlens.evals.runner import run_experiment
 from paperlens.evals.stats import paired_bootstrap
 from paperlens.index.embedder import HashingEmbedder
@@ -210,3 +210,27 @@ def test_rescore_of_paragraph_run_keeps_evidence_f1(
         tmp_path, sample_paper, sample_questions, ["1234.5678::s0p1"], cite_unit="paragraph"
     )
     assert f1 == 1.0
+
+
+def test_rescore_names_a_missing_index(
+    tmp_path: Path, sample_paper: Paper, sample_questions: list[Question]
+) -> None:
+    cfg = AppConfig(
+        data={"data_dir": tmp_path / "data", "sample_size": None},
+        chunking={"strategy": "fixed", "chunk_size": 10, "chunk_overlap": 2},
+        embedding={"model_name": "hashing"},
+        generation={"prompt_template": REPO / "prompts" / "baseline_answer.md"},
+        eval={
+            "run_name": "orig",
+            "reference_run": None,
+            "results_dir": tmp_path / "results",
+            "mlflow_tracking_uri": f"sqlite:///{tmp_path / 'mlflow.db'}",
+        },
+    )
+    llm = FakeLLM(['{"answer_type": "extractive", "answer": "SQuAD", "evidence": [1]}'] * 3)
+    dataset = ([sample_paper], sample_questions)
+    run_experiment(cfg, dataset=dataset, embedder=HashingEmbedder(), llm=llm)
+    (chunk_file,) = (tmp_path / "data" / "index").glob("*/chunks.jsonl")
+    chunk_file.unlink()
+    with pytest.raises(MissingIndexError, match="paperlens index"):
+        rescore_run(tmp_path / "results" / "orig", dataset=dataset)

@@ -135,7 +135,7 @@ class BaselinePipeline:
 
     def run(self, question: Question, plan: QueryPlan | None = None) -> PipelineResult:
         """Answer one question; pass a `plan` you already made to avoid a second transform call."""
-        plan = plan or self.plan(question)
+        plan = self.plan(question) if plan is None else plan
         # The timer starts after planning: the transform's latency is already in plan.usage
         # (and so in answer.usage), and EvalRecord adds both, so it must be counted once.
         started = time.perf_counter()

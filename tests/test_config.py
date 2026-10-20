@@ -73,6 +73,10 @@ def test_explain_lists_nested_fields() -> None:
 M1B_CONFIG_DIR = Path(__file__).resolve().parents[1] / "experiments" / "configs" / "m1b"
 
 
+def test_m1b_config_dir_is_not_empty() -> None:
+    assert sorted(M1B_CONFIG_DIR.glob("*.yaml")), "the parametrized test below would run 0 cases"
+
+
 @pytest.mark.parametrize("path", sorted(M1B_CONFIG_DIR.glob("*.yaml")), ids=lambda p: p.name)
 def test_m1b_configs_load_and_name_their_run(path: Path) -> None:
     cfg = load_config(path)

@@ -118,15 +118,24 @@ def rescore(
     run: Annotated[str | None, typer.Option("--run", help="One run; default: all")] = None,
 ) -> None:
     """Recompute records, metrics and reports of saved runs without calling the LLM."""
-    from paperlens.evals.rescore import rescore_run
+    from paperlens.evals.rescore import MissingIndexError, rescore_run
 
     dirs = [results_dir / run] if run else sorted(d for d in results_dir.iterdir() if d.is_dir())
     # references first, so every rescored report compares against rescored numbers
     dirs.sort(key=lambda d: d.name != "baseline")
+    skipped: list[str] = []
     for d in dirs:
         if (d / "records.jsonl").exists():
-            result = rescore_run(d)
+            try:
+                result = rescore_run(d)
+            except MissingIndexError as err:  # one missing index must not stop the other runs
+                typer.echo(f"skipped {err}", err=True)
+                skipped.append(d.name)
+                continue
             typer.echo(f"{d.name}: answer_f1={result.metrics.get('answer_f1', 0):.3f}")
+    if skipped:
+        typer.echo(f"not rescored (index missing): {', '.join(skipped)}", err=True)
+        raise typer.Exit(1)
 
 
 @app.command()

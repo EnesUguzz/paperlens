@@ -56,8 +56,13 @@ def verdict(record: EvalRecord, llm: FakeLLM) -> JudgeVerdict:
 
 def test_rules_decide_without_llm() -> None:
     llm = FakeLLM([])
-    refused_ok = make_record(gold_unanswerable=True, gold_type="unanswerable", refused=True)
-    answered_bad = make_record("q2", gold_unanswerable=True, gold_type="unanswerable")
+    unanswerable = {
+        "gold_texts": ["Unanswerable"],
+        "gold_unanswerable": True,
+        "gold_type": "unanswerable",
+    }
+    refused_ok = make_record(refused=True, **unanswerable)
+    answered_bad = make_record("q2", **unanswerable)
     refused_bad = make_record("q3", refused=True)
     assert verdict(refused_ok, llm).correct is True
     assert verdict(answered_bad, llm).correct is False
@@ -100,6 +105,40 @@ def test_exact_match_with_minority_reference_is_correct_without_llm() -> None:
     assert verdict(refused, llm).correct is True
     assert verdict(answered, llm).correct is True
     assert llm.calls == []
+
+
+def test_mixed_references_answer_goes_to_llm() -> None:
+    # 'gold unanswerable' by majority, but one annotator answered: any reference counts
+    mixed = make_record(
+        gold_texts=["Unanswerable", "BLEU"],
+        gold_unanswerable=True,
+        gold_type="unanswerable",
+        prediction="BLEU score",
+        answer_f1=0.67,
+    )
+    llm = FakeLLM([CORRECT])
+    result = verdict(mixed, llm)
+    assert (result.correct, result.method) == (True, "llm")
+    prompt = llm.calls[0][0][0]["content"]
+    assert "- BLEU" in prompt and "Unanswerable" not in prompt
+
+
+def test_judge_run_applies_rules_before_cached_llm_verdicts(tmp_path: Path) -> None:
+    run_dir = tmp_path / "run"
+    record = make_record("a")
+    write_run(run_dir, [record])
+    cfg = JudgeConfig(prompt_template=REPO / "prompts" / "judge.md")
+    judge_run(run_dir, cfg, FakeLLM(['{"reason": "no", "correct": false}']))
+    # the record now matches a reference exactly; the stale LLM 'false' must not survive
+    (run_dir / RECORDS_FILE).write_text(
+        record.model_copy(update={"answer_f1": 1.0}).model_dump_json()
+    )
+    llm = FakeLLM([])
+    metrics = judge_run(run_dir, cfg, llm)
+    assert llm.calls == []
+    assert metrics["judge.accuracy"] == 1.0 and metrics["judge.llm_calls"] == 0.0
+    lines = (run_dir / JUDGE_FILE).read_text().splitlines()
+    assert [JudgeVerdict.model_validate_json(x).method for x in lines] == ["rule"]
 
 
 def test_judge_metrics_agreement_on_high_f1() -> None:

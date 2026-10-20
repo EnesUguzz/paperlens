@@ -45,6 +45,10 @@ UNRECORDED = {
 }
 
 
+class MissingIndexError(FileNotFoundError):
+    """The run's index is not on disk, so its chunks cannot be looked up."""
+
+
 def unflatten(flat: Mapping[str, Any]) -> dict[str, Any]:
     nested: dict[str, Any] = {}
     for key, value in flat.items():
@@ -87,7 +91,13 @@ def rescore_run(
     loaded = resolve_dataset(cfg.data, dataset)
     questions = loaded.questions
     by_id = {q.question_id: q for q in questions}
-    chunk_file = cfg.data.data_dir / "index" / index_key(cfg) / CHUNKS_FILE
+    key = index_key(cfg, loaded.papers)
+    chunk_file = cfg.data.data_dir / "index" / key / CHUNKS_FILE
+    if not chunk_file.exists():
+        raise MissingIndexError(
+            f"{run_dir.name}: index {key} is missing; build it with "
+            "`paperlens index --config <the config of this run>`"
+        )
     lines = chunk_file.read_text(encoding="utf-8").splitlines()
     chunks = {c.chunk_id: c for c in (Chunk.model_validate_json(line) for line in lines if line)}
     k_values = [k for k in cfg.eval.k_values if k <= cfg.retrieval.top_k]

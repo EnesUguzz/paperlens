@@ -77,7 +77,9 @@ def run_experiment(
         pipeline = build_pipeline(
             cfg, bundle, llm or OpenAICompatClient(cfg.llm), {p.paper_id: p.title for p in papers}
         )
-        log.info("run start", run=cfg.eval.run_name, questions=len(sample), index=index_key(cfg))
+        log.info(
+            "run start", run=cfg.eval.run_name, questions=len(sample), index=index_key(cfg, papers)
+        )
         records = evaluate(sample, pipeline, k_values, cfg.eval.log_every, cfg.generation.cite_unit)
     finally:
         bundle.dense.close()
