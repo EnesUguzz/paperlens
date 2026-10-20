@@ -19,12 +19,14 @@
 | answer_f1.gold.yes_no | 0.375 | 0.464 | -0.089 |
 | answer_f1.unanswerable | 0.478 | 0.458 | +0.020 |
 | answer_f1.yes_no | 0.370 | 0.486 | -0.116 |
+| answer_words_mean | 15.196 | 15.492 | -0.296 |
 | completion_tokens_mean | 51.184 | 51.800 | -0.616 |
 | context_words_mean | 974.236 | 998.848 | -24.612 |
 | error_rate | 0.000 | 0.000 | +0.000 |
 | evidence_f1 | 0.270 | 0.297 | -0.027 |
 | evidence_f1_ceiling | 0.471 | 0.524 | -0.053 |
 | false_refusal_rate | 0.061 | 0.042 | +0.019 |
+| gold_recall | 0.442 | 0.494 | -0.053 |
 | index.num_chunks | 6676.000 | 6676.000 | +0.000 |
 | latency_p50_ms | 953.122 | 1042.795 | -89.673 |
 | latency_p95_ms | 1766.440 | 1850.713 | -84.273 |
@@ -40,6 +42,7 @@
 | prompt_tokens_max | 2526.000 | 2577.000 | -51.000 |
 | prompt_tokens_mean | 2170.632 | 2228.868 | -58.236 |
 | refusal_recall | 0.270 | 0.270 | +0.000 |
+| retrieval.doc_hit_rate | 1.000 | 1.000 | +0.000 |
 | retrieval.mrr | 0.437 | 0.552 | -0.115 |
 | retrieval.n | 230.000 | 230.000 | +0.000 |
 | retrieval.ndcg_at_1 | 0.300 | 0.409 | -0.109 |

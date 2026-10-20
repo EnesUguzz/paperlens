@@ -8,6 +8,7 @@ from paperlens.evals.answer_metrics import (
     prediction_text,
     score_answer,
     token_f1,
+    token_recall,
 )
 
 
@@ -51,3 +52,9 @@ def test_gold_unanswerable_on_tie_counts_as_unanswerable() -> None:
     ]
     assert is_gold_unanswerable(refs)
     assert not is_gold_unanswerable(refs[1:])
+
+
+def test_token_recall() -> None:
+    assert token_recall("We use the SQuAD dataset", "SQuAD") == 1.0
+    assert token_recall("SQuAD", "SQuAD and TriviaQA") == pytest.approx(1 / 3)
+    assert token_recall("anything", "") == 0.0

@@ -19,6 +19,8 @@ from paperlens.evals.stats import BOOTSTRAP_RESAMPLES, CONFIDENCE, paired_bootst
 DEFAULT_REFERENCE = "baseline"
 HEADLINE_METRICS = (
     "answer_f1",
+    "gold_recall",
+    "answer_words_mean",
     "evidence_f1",
     "evidence_f1_ceiling",
     "retrieval.recall_at_5",

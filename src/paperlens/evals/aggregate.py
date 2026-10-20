@@ -38,6 +38,8 @@ def aggregate(records: Sequence[EvalRecord], k_values: Sequence[int]) -> dict[st
     metrics: dict[str, float] = {
         "n_questions": float(len(records)),
         "answer_f1": _mean([r.answer_f1 for r in records]),
+        "gold_recall": _mean([r.gold_recall for r in records]),
+        "answer_words_mean": _mean([r.answer_words for r in records]),
         "evidence_f1": _mean([r.evidence_f1 for r in records]),
         "evidence_f1_ceiling": _mean([r.evidence_f1_ceiling for r in records]),
     }
@@ -54,6 +56,9 @@ def aggregate(records: Sequence[EvalRecord], k_values: Sequence[int]) -> dict[st
 
     scored = [r.retrieval for r in records if r.retrieval is not None]
     metrics["retrieval.n"] = float(len(scored))
+    hit_rates = [r.doc_hit_rate for r in records if r.doc_hit_rate is not None]
+    if hit_rates:
+        metrics["retrieval.doc_hit_rate"] = _mean(hit_rates)
     keys = [f"recall_at_{k}" for k in k_values] + [f"ndcg_at_{k}" for k in k_values] + ["mrr"]
     for key in keys:
         if scored:

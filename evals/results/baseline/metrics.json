@@ -1,6 +1,8 @@
 {
   "n_questions": 250.0,
   "answer_f1": 0.4187387028847851,
+  "gold_recall": 0.49448178423475087,
+  "answer_words_mean": 15.492,
   "evidence_f1": 0.29681064746414054,
   "evidence_f1_ceiling": 0.5238208680208679,
   "n.extractive": 144.0,
@@ -20,6 +22,7 @@
   "n.gold.unanswerable": 37.0,
   "answer_f1.gold.unanswerable": 0.4107472349320905,
   "retrieval.n": 230.0,
+  "retrieval.doc_hit_rate": 1.0,
   "retrieval.recall_at_1": 0.3348978919631094,
   "retrieval.recall_at_3": 0.602536231884058,
   "retrieval.recall_at_5": 0.7029710144927537,

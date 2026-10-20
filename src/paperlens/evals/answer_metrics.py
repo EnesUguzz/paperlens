@@ -40,6 +40,18 @@ def token_f1(prediction: str, gold: str) -> float:
     return 2 * precision * recall / (precision + recall)
 
 
+def token_recall(prediction: str, gold: str) -> float:
+    """Share of the gold answer's tokens found in the prediction (0.0 for an empty gold).
+
+    Unlike token_f1 it does not punish a long answer, so it separates "the model never said
+    it" from "it said it inside too many words"."""
+    gold_tokens = normalize_answer(gold).split()
+    if not gold_tokens:
+        return 0.0
+    pred_tokens = normalize_answer(prediction).split()
+    return sum((Counter(pred_tokens) & Counter(gold_tokens)).values()) / len(gold_tokens)
+
+
 def paragraph_f1(predicted: Sequence[str], gold: Sequence[str]) -> float:
     if not predicted and not gold:
         return 1.0

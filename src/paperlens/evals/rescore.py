@@ -57,12 +57,16 @@ def unflatten(flat: Mapping[str, Any]) -> dict[str, Any]:
 
 def _answer_from_record(raw: dict[str, Any], chunks: Mapping[str, Chunk]) -> Answer:
     cited = [chunks[c] for c in raw["cited_chunk_ids"]]
+    if "cited_paragraph_ids" in raw:  # the model's own paragraph citations, kept exactly
+        evidence_ids = list(raw["cited_paragraph_ids"])
+    else:  # old record: a cited chunk counts as all of its paragraphs
+        evidence_ids = list(dict.fromkeys(p for c in cited for p in c.paragraph_ids))
     return Answer(
         question_id=raw["question_id"],
         answer_type=raw["predicted_type"],
         text=raw["prediction"],
         citations=raw["cited_chunk_ids"],
-        evidence_ids=list(dict.fromkeys(p for c in cited for p in c.paragraph_ids)),
+        evidence_ids=evidence_ids,
         refused=raw["refused"],
         error=raw["error"],
         # total latency was stored; keep it whole so latency metrics are unchanged

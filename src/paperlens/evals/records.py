@@ -24,6 +24,7 @@ from paperlens.evals.answer_metrics import (
     paragraph_f1,
     prediction_text,
     score_answer,
+    token_recall,
 )
 from paperlens.evals.retrieval_metrics import best_over_references
 
@@ -82,6 +83,11 @@ class EvalRecord(BaseModel):
     retrieval: dict[str, float] | None
     retrieved_chunk_ids: list[str]
     cited_chunk_ids: list[str]
+    # defaults keep records saved before these fields existed loadable
+    cited_paragraph_ids: list[str] = []
+    answer_words: int = 0
+    gold_recall: float = 0.0
+    doc_hit_rate: float | None = None
     top_context_preview: str
     context_words: int
     prompt_tokens: int
@@ -113,6 +119,15 @@ def build_record(question: Question, result: PipelineResult, k_values: Sequence[
         retrieval=best_over_references(ranked, question.references, k_values),
         retrieved_chunk_ids=[sc.chunk.chunk_id for sc in result.retrieved],
         cited_chunk_ids=answer.citations,
+        cited_paragraph_ids=answer.evidence_ids,
+        answer_words=len(prediction.split()),
+        gold_recall=max(token_recall(prediction, r.answer_text) for r in question.references),
+        doc_hit_rate=(
+            sum(sc.chunk.paper_id == question.paper_id for sc in result.retrieved)
+            / len(result.retrieved)
+            if result.retrieved
+            else None
+        ),
         top_context_preview=preview,
         context_words=sum(len(sc.chunk.text.split()) for sc in result.retrieved),
         prompt_tokens=answer.usage.prompt_tokens,

@@ -4,7 +4,7 @@ from pathlib import Path
 import pytest
 
 from paperlens.config.models import AppConfig
-from paperlens.domain import Paper, Question
+from paperlens.domain import Chunk, Paper, Question
 from paperlens.evals.provenance import collect_meta
 from paperlens.evals.report import changed_params
 from paperlens.evals.rescore import rescore_run, unflatten
@@ -91,3 +91,61 @@ def test_rescore_reproduces_metrics_without_llm(
     for key, value in original.metrics.items():
         assert rescored.metrics[key] == pytest.approx(value), key
     assert (run_dir / "report.md").exists()
+
+
+def _rescore_single_citation(
+    tmp_path: Path,
+    sample_paper: Paper,
+    sample_questions: list[Question],
+    extra: dict[str, list[str]],
+) -> float:
+    """Run once, then rewrite the run so q1 cites one 2-paragraph chunk; return rescored evidence_f1."""
+    cfg = AppConfig(
+        data={"data_dir": tmp_path / "data", "sample_size": None},
+        chunking={"strategy": "fixed", "chunk_size": 10, "chunk_overlap": 2},
+        embedding={"model_name": "hashing"},
+        retrieval={"method": "dense", "top_k": 3},
+        generation={"prompt_template": REPO / "prompts" / "baseline_answer.md"},
+        eval={
+            "run_name": "orig",
+            "reference_run": None,
+            "results_dir": tmp_path / "results",
+            "mlflow_tracking_uri": f"sqlite:///{tmp_path / 'mlflow.db'}",
+            "k_values": [1, 3],
+        },
+    )
+    llm = FakeLLM(['{"answer_type": "extractive", "answer": "SQuAD", "evidence": [1]}'] * 3)
+    dataset = ([sample_paper], sample_questions)
+    run_experiment(cfg, dataset=dataset, embedder=HashingEmbedder(), llm=llm)
+    run_dir = tmp_path / "results" / "orig"
+    wide = Chunk(
+        chunk_id="P::c1",
+        paper_id="1234.5678",
+        section="S",
+        text="wide chunk",
+        paragraph_ids=["1234.5678::s0p1", "1234.5678::s0p0"],
+    )
+    (chunk_file,) = (tmp_path / "data" / "index").glob("*/chunks.jsonl")
+    chunk_file.write_text(wide.model_dump_json() + "\n", encoding="utf-8")
+    records_file = run_dir / "records.jsonl"
+    raw = json.loads(records_file.read_text(encoding="utf-8").splitlines()[0])
+    raw.update(retrieved_chunk_ids=["P::c1"], cited_chunk_ids=["P::c1"], **extra)
+    records_file.write_text(json.dumps(raw) + "\n", encoding="utf-8")
+    run = rescore_run(run_dir, dataset=dataset)
+    return run.records[0].evidence_f1
+
+
+def test_rescore_uses_cited_paragraph_ids_when_present(
+    tmp_path: Path, sample_paper: Paper, sample_questions: list[Question]
+) -> None:
+    f1 = _rescore_single_citation(
+        tmp_path, sample_paper, sample_questions, {"cited_paragraph_ids": ["1234.5678::s0p1"]}
+    )
+    assert f1 == 1.0
+
+
+def test_rescore_expands_chunks_for_old_records_without_the_field(
+    tmp_path: Path, sample_paper: Paper, sample_questions: list[Question]
+) -> None:
+    f1 = _rescore_single_citation(tmp_path, sample_paper, sample_questions, {})
+    assert f1 == pytest.approx(2 / 3)

@@ -142,3 +142,30 @@ def test_aggregate_reports_gold_type_buckets_and_ceiling(sample_questions: list[
     assert m["n.yes_no"] == 1 and m["n.gold.unanswerable"] == 1
     assert m["answer_f1.gold.unanswerable"] == 1.0
     assert m["evidence_f1_ceiling"] == pytest.approx(1.0)
+
+
+def test_record_reports_length_recall_and_doc_hits(sample_questions: list[Question]) -> None:
+    q1 = sample_questions[0]
+    rec = build_record(
+        q1, result("q1", "extractive", "the SQuAD dataset", ["1234.5678::s0p1"]), [1]
+    )
+    assert rec.answer_words == 3 and rec.gold_recall == 1.0
+    assert rec.doc_hit_rate == 0.0  # CHUNK.paper_id is "P", question paper is "1234.5678"
+    assert rec.cited_paragraph_ids == ["1234.5678::s0p1"]
+
+
+def test_doc_hit_rate_is_none_without_retrieval(sample_questions: list[Question]) -> None:
+    empty = result("q1", "extractive", "SQuAD", []).model_copy(update={"retrieved": []})
+    assert build_record(sample_questions[0], empty, [1]).doc_hit_rate is None
+
+
+def test_aggregate_reports_new_metrics(sample_questions: list[Question]) -> None:
+    q1 = sample_questions[0]
+    records = [
+        build_record(q1, result("q1", "extractive", "the SQuAD dataset", []), [1]),
+        build_record(q1, result("q1", "extractive", "SQuAD", []), [1]),
+    ]
+    m = aggregate(records, [1])
+    assert m["gold_recall"] == 1.0
+    assert m["answer_words_mean"] == pytest.approx(2.0)
+    assert m["retrieval.doc_hit_rate"] == 0.0
