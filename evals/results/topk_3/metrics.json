@@ -37,5 +37,13 @@
   "prompt_tokens_max": 1913.0,
   "completion_tokens_mean": 49.716,
   "context_words_mean": 599.68,
-  "index.num_chunks": 6676.0
+  "index.num_chunks": 6676.0,
+  "judge.error_rate": 0.0,
+  "judge.llm_calls": 163.0,
+  "judge.accuracy": 0.452,
+  "judge.accuracy.gold.extractive": 0.5267175572519084,
+  "judge.accuracy.gold.abstractive": 0.29310344827586204,
+  "judge.accuracy.gold.yes_no": 0.4166666666666667,
+  "judge.accuracy.gold.unanswerable": 0.4594594594594595,
+  "judge.agreement_on_high_f1": 0.9375
 }
