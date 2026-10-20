@@ -7,7 +7,7 @@ Flow: DataConfig -> download_split/load_split -> (qasper_text) as is | (pdf_docl
 load_blocks -> blocks_to_paper -> align_questions -> LoadedData; sample_dataset() then draws
 the eval sample from ALL questions and drops those whose paper has no parsed PDF.
 Params: data.text_source, data.split, data.sample_size, data.seed, data.align_min_score,
-data.align_min_words.
+data.align_min_words, data.align_score_margin.
 Try: Compare data.evidence_aligned_rate for align_min_score 80 vs 95; if it barely moves the
 alignment is robust, if it jumps the threshold is cutting real matches.
 """
@@ -70,6 +70,7 @@ def load_dataset(cfg: DataConfig) -> LoadedData:
             by_paper.get(pid, []),
             cfg.align_min_score,
             cfg.align_min_words,
+            cfg.align_score_margin,
         )
         papers.append(pdf_paper)
         aligned_questions.update({q.question_id: q for q in aligned})

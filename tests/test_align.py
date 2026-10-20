@@ -7,6 +7,7 @@ SENTENCE_A = "We evaluate the proposed encoder on three public benchmarks and re
 SENTENCE_B = "and the results show consistent gains over the strong baselines in every setting"
 MIN_SCORE = 85.0
 MIN_WORDS = 8
+MARGIN = 5.0
 
 
 def _para(pid: str, text: str, caption: bool = False) -> Paragraph:
@@ -24,7 +25,7 @@ def _question(evidence: list[str]) -> Question:
 
 def test_align_exact_paragraph() -> None:
     candidates = [_para("P::d0", SENTENCE_A), _para("P::d1", "Completely different text " * 5)]
-    assert align_paragraph(SENTENCE_A, candidates, MIN_SCORE, MIN_WORDS) == ["P::d0"]
+    assert align_paragraph(SENTENCE_A, candidates, MIN_SCORE, MIN_WORDS, MARGIN) == ["P::d0"]
 
 
 def test_align_split_paragraph_maps_to_both_halves() -> None:
@@ -36,25 +37,33 @@ def test_align_split_paragraph_maps_to_both_halves() -> None:
             _para("P::d2", SENTENCE_B),
         ]
     )
-    questions, stats = align_questions(qasper, pdf, [_question(["P::s0p0"])], MIN_SCORE, MIN_WORDS)
+    questions, stats = align_questions(
+        qasper, pdf, [_question(["P::s0p0"])], MIN_SCORE, MIN_WORDS, MARGIN
+    )
     assert questions[0].references[0].evidence_ids == ["P::d0", "P::d2"]
     assert (stats.evidence, stats.aligned, stats.split) == (1, 1, 1)
 
 
 def test_short_fragments_never_match() -> None:
     candidates = [_para("P::d0", "Results"), _para("P::d1", SENTENCE_A)]
-    assert align_paragraph(f"Results {SENTENCE_A}", candidates, MIN_SCORE, MIN_WORDS) == ["P::d1"]
+    assert align_paragraph(f"Results {SENTENCE_A}", candidates, MIN_SCORE, MIN_WORDS, MARGIN) == [
+        "P::d1"
+    ]
 
 
 def test_short_captions_are_exempt_from_min_words() -> None:
     candidates = [_para("P::d0", "Table 2: Results", caption=True)]
-    assert align_paragraph("Table 2: Results", candidates, MIN_SCORE, MIN_WORDS) == ["P::d0"]
+    assert align_paragraph("Table 2: Results", candidates, MIN_SCORE, MIN_WORDS, MARGIN) == [
+        "P::d0"
+    ]
 
 
 def test_unaligned_evidence_becomes_sentinel() -> None:
     qasper = _paper([_para("P::s0p0", SENTENCE_A)])
     pdf = _paper([_para("P::d0", "Nothing alike appears in this other paragraph at all today.")])
-    questions, stats = align_questions(qasper, pdf, [_question(["P::s0p0"])], MIN_SCORE, MIN_WORDS)
+    questions, stats = align_questions(
+        qasper, pdf, [_question(["P::s0p0"])], MIN_SCORE, MIN_WORDS, MARGIN
+    )
     ref = questions[0].references[0]
     assert ref.evidence_ids == ["P::unaligned0"]
     assert ref.unmatched_evidence == 1
@@ -64,7 +73,9 @@ def test_unaligned_evidence_becomes_sentinel() -> None:
 def test_unaligned_reference_cannot_score_empty_evidence() -> None:
     qasper = _paper([_para("P::s0p0", SENTENCE_A)])
     pdf = _paper([_para("P::d0", "Nothing alike appears in this other paragraph at all today.")])
-    questions, _ = align_questions(qasper, pdf, [_question(["P::s0p0"])], MIN_SCORE, MIN_WORDS)
+    questions, _ = align_questions(
+        qasper, pdf, [_question(["P::s0p0"])], MIN_SCORE, MIN_WORDS, MARGIN
+    )
     best = score_answer("x", [], questions[0].references)
     assert best.evidence_f1 == 0.0
 
@@ -72,5 +83,21 @@ def test_unaligned_reference_cannot_score_empty_evidence() -> None:
 def test_references_without_evidence_stay_untouched() -> None:
     qasper = _paper([_para("P::s0p0", SENTENCE_A)])
     pdf = _paper([_para("P::d0", SENTENCE_A)])
-    questions, stats = align_questions(qasper, pdf, [_question([])], MIN_SCORE, MIN_WORDS)
+    questions, stats = align_questions(qasper, pdf, [_question([])], MIN_SCORE, MIN_WORDS, MARGIN)
     assert questions[0].references[0].evidence_ids == [] and stats.evidence == 0
+
+
+def test_near_duplicate_sibling_is_dropped_by_margin() -> None:
+    gold = "uses the modality attention to merge word, character, and visual embeddings as input"
+    sibling = "uses the modality attention to merge word and character embeddings as input"
+    candidates = [_para("P::d0", sibling), _para("P::d1", gold)]
+    assert align_paragraph(gold, candidates, 80.0, MIN_WORDS, MARGIN) == ["P::d1"]
+    assert align_paragraph(gold, candidates, 80.0, MIN_WORDS, 50.0) == ["P::d0", "P::d1"]
+
+
+def test_qasper_placeholders_are_ignored() -> None:
+    body = "we compare our approach with several pivoting and multilingual baselines on the zero-shot sets"
+    gold = f"Table TABREF19 and FIGREF2 report that {body} (BIBREF12), see INLINEFORM0."
+    pdf = f"Table 2 and Figure 3 report that {body} (Johnson et al. 2017), see x."
+    out = align_paragraph(gold, [_para("P::d0", pdf)], MIN_SCORE, MIN_WORDS, MARGIN)
+    assert out == ["P::d0"]

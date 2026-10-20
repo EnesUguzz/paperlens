@@ -64,8 +64,8 @@ def test_load_dataset_pdf_aligns_and_reports_missing(
     assert loaded.metrics["data.papers_missing"] == 1.0
     q1 = next(q for q in loaded.questions if q.question_id == "q1")
     assert q1.references[0].evidence_ids == [f"{PID}::d0"]
-    # 4 aligned of 5 evidence strings in the parsed paper (one never existed in QASPER's text)
-    assert 0.0 < loaded.metrics["data.evidence_aligned_rate"] <= 1.0
+    # every QASPER-matched evidence string aligns to its PDF paragraph or caption
+    assert loaded.metrics["data.evidence_aligned_rate"] == 1.0
     assert loaded.metrics["data.evidence_split_rate"] == 0.0
 
 

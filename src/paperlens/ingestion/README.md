@@ -14,7 +14,7 @@ gets scored: a gold evidence paragraph is "found" if a retrieved chunk contains 
 Experiments touching this package: chunk size / overlap / strategy, captions on/off, `data.pdf_download_delay_s` (>= 3 s for arXiv).
 
 `pdf_docling` evidence: gold evidence is re-pointed from QASPER paragraph ids to PDF paragraph ids by fuzzy matching
-(`data.align_min_score`, `data.align_min_words`). A QASPER paragraph split by a page break maps to several PDF ids
+(`data.align_min_score`, `data.align_min_words`, `data.align_score_margin`; QASPER placeholders such as `BIBREF12` are stripped first). A QASPER paragraph split by a page break maps to several PDF ids
 (`data.evidence_split_rate`); evidence with no match keeps a `::unaligned<n>` id so it scores as never found
 (`data.evidence_aligned_rate` below ~0.8 means alignment loss dominates any parser comparison; inspect examples with
 `align.scored_matches` before touching the threshold). Experiments touching this: `data.text_source`, `data.align_*`.

@@ -108,6 +108,18 @@ class DataConfig(_Section):
             "contains it; too high and genuinely short paragraphs lose their evidence label."
         ),
     )
+    align_score_margin: float = Field(
+        5.0,
+        ge=0,
+        le=100,
+        description=(
+            "What: a PDF paragraph only counts as a match if its score is within this many "
+            "points of the best score for that gold paragraph (text_source 'pdf_docling' "
+            "only). Typical: 3-10. "
+            "Effect: lower values drop near-duplicate sibling paragraphs (fewer wrong ids) but "
+            "can lose the second half of a genuinely split paragraph; higher values keep both."
+        ),
+    )
 
 
 class ChunkingConfig(_Section):

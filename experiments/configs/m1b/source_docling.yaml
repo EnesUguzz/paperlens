@@ -10,6 +10,7 @@ data:
   text_source: pdf_docling
   align_min_score: 85.0
   align_min_words: 8
+  align_score_margin: 5.0
 eval:
   experiment_name: m1b
   run_name: source_docling

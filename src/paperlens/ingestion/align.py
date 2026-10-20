@@ -6,13 +6,14 @@ paragraphs that contain it. Evidence that cannot be matched stays visible as a s
 instead of silently vanishing (which would make a question look like it has no evidence).
 Flow: (qasper Paper, pdf Paper, questions) -> align_paragraph() per evidence paragraph ->
 align_questions() -> questions whose evidence_ids are PDF paragraph ids + AlignmentStats.
-Params: data.align_min_score, data.align_min_words.
+Params: data.align_min_score, data.align_min_words, data.align_score_margin.
 Try: Print a few (qasper text, matched PDF text, score) pairs for one paper before trusting
 a new threshold; a split paragraph should map to two adjacent PDF ids.
 """
 
 from __future__ import annotations
 
+import re
 from collections.abc import Sequence
 
 from pydantic import BaseModel
@@ -21,6 +22,8 @@ from rapidfuzz import fuzz, process
 from paperlens.domain import Paper, Paragraph, Question, Reference
 
 UNALIGNED_MARK = "unaligned"  # sentinel id: f"{paper_id}::unaligned{n}"
+# QASPER replaces citations, tables and formulas by tokens like BIBREF12; the PDF has real text there.
+PLACEHOLDER = re.compile(r"\b(?:BIB|TAB|FIG|SEC)REF\d+|\b(?:INLINE|DISPLAY)FORM\d+")
 
 
 class AlignmentStats(BaseModel):
@@ -34,7 +37,7 @@ def _normalize(text: str) -> str:
 
 
 def scored_matches(
-    text: str, candidates: Sequence[Paragraph], min_score: float, min_words: int
+    text: str, candidates: Sequence[Paragraph], min_score: float, min_words: int, margin: float
 ) -> list[tuple[str, float]]:
     """(paragraph id, partial_ratio score) of every eligible candidate above min_score,
     in the candidates' document order."""
@@ -42,23 +45,29 @@ def scored_matches(
     if not eligible:
         return []
     hits = process.extract(
-        _normalize(text),
+        _normalize(PLACEHOLDER.sub(" ", text)),  # QASPER side only
         [_normalize(c.text) for c in eligible],
         scorer=fuzz.partial_ratio,
         score_cutoff=min_score,
         limit=None,
         processor=None,  # already normalised above
     )
+    # Keep only matches close to the best one: near-duplicate siblings (e.g. two list items
+    # that differ by a few words) score a few points below the true paragraph.
+    best = max(score for _, score, _ in hits) if hits else 0.0
+    floor = max(min_score, best - margin)
     return [
-        (eligible[idx].paragraph_id, score) for _, score, idx in sorted(hits, key=lambda h: h[2])
+        (eligible[idx].paragraph_id, score)
+        for _, score, idx in sorted(hits, key=lambda h: h[2])
+        if score >= floor
     ]
 
 
 def align_paragraph(
-    text: str, candidates: Sequence[Paragraph], min_score: float, min_words: int
+    text: str, candidates: Sequence[Paragraph], min_score: float, min_words: int, margin: float
 ) -> list[str]:
     """Ids of the PDF paragraphs that hold `text` (document order)."""
-    return [pid for pid, _ in scored_matches(text, candidates, min_score, min_words)]
+    return [pid for pid, _ in scored_matches(text, candidates, min_score, min_words, margin)]
 
 
 def align_questions(
@@ -67,6 +76,7 @@ def align_questions(
     questions: Sequence[Question],
     min_score: float,
     min_words: int,
+    margin: float,
 ) -> tuple[list[Question], AlignmentStats]:
     """Rewrite each reference's evidence_ids from QASPER ids to PDF paragraph ids."""
     text_of = {p.paragraph_id: p.text for p in qasper_paper.paragraphs}
@@ -82,7 +92,7 @@ def align_questions(
             for qid in ref.evidence_ids:
                 if qid not in cache:
                     cache[qid] = align_paragraph(
-                        text_of[qid], pdf_paper.paragraphs, min_score, min_words
+                        text_of[qid], pdf_paper.paragraphs, min_score, min_words, margin
                     )
                 matched = cache[qid]
                 stats.evidence += 1
