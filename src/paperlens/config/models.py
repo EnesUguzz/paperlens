@@ -324,7 +324,7 @@ class JudgeConfig(_Section):
             "What: Ollama model that grades answers as correct/incorrect (`paperlens judge`). "
             "Effect: pick a different model family than the answering model (llm.model), "
             "because models tend to favour their own answers; a weak judge disagrees with "
-            "exact matches (judge.agreement_on_exact drops)."
+            "near-exact answers (judge.agreement_on_high_f1 drops)."
         ),
     )
     extra_body: dict[str, Any] = Field(
