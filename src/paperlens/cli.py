@@ -110,6 +110,24 @@ def rescore(
             typer.echo(f"{d.name}: answer_f1={result.metrics.get('answer_f1', 0):.3f}")
 
 
+@app.command()
+def trace(
+    config: ConfigOpt = DEFAULT_CONFIG,
+    question_id: Annotated[str | None, typer.Option("--question-id", help="QASPER id")] = None,
+    index: Annotated[int, typer.Option("--index", help="Position in the eval sample")] = 0,
+    no_llm: Annotated[bool, typer.Option("--no-llm", help="Stop after the prompt")] = False,
+    out: Annotated[Path | None, typer.Option("--out", help="Also write to this file")] = None,
+) -> None:
+    """Follow one question through chunks, retrieval, prompt, LLM and scoring."""
+    from paperlens.trace import run_trace
+
+    text = run_trace(load_config(config), question_id=question_id, index=index, use_llm=not no_llm)
+    if out:
+        out.parent.mkdir(parents=True, exist_ok=True)
+        out.write_text(text, encoding="utf-8")
+    typer.echo(text)
+
+
 @app.command("check-gpu")
 def check_gpu() -> None:
     """Verify torch sees the GPU and can run fp16."""

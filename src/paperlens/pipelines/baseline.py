@@ -77,17 +77,20 @@ class BaselinePipeline:
         self._template = template
         self._titles = titles
 
-    def run(self, question: Question) -> PipelineResult:
-        started = time.perf_counter()
-        retrieved = self._retriever.retrieve(question.question, paper_id=question.paper_id)
-        retrieval_ms = (time.perf_counter() - started) * 1000
-        prompt = render_prompt(
+    def build_prompt(self, question: Question, retrieved: Sequence[ScoredChunk]) -> str:
+        """The exact text sent to the LLM (also shown by `paperlens trace`)."""
+        return render_prompt(
             self._template,
             title=self._titles.get(question.paper_id, ""),
             context=format_context(retrieved),
             question=question.question,
         )
-        messages = [{"role": "user", "content": prompt}]
+
+    def run(self, question: Question) -> PipelineResult:
+        started = time.perf_counter()
+        retrieved = self._retriever.retrieve(question.question, paper_id=question.paper_id)
+        retrieval_ms = (time.perf_counter() - started) * 1000
+        messages = [{"role": "user", "content": self.build_prompt(question, retrieved)}]
         try:
             draft, usage = structured_call(self._llm, messages, AnswerDraft)
         except (LLMError, StructuredOutputError) as err:
