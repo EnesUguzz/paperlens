@@ -23,7 +23,7 @@ from pydantic import BaseModel
 
 from paperlens.config.models import JudgeConfig
 from paperlens.domain import UNANSWERABLE_TEXT, AnswerType
-from paperlens.evals.provenance import _sha
+from paperlens.evals.provenance import file_sha
 from paperlens.evals.records import EvalRecord
 from paperlens.evals.report import METRICS_FILE, RECORDS_FILE
 from paperlens.llm.client import LLMClient, LLMError
@@ -65,35 +65,59 @@ def render_judge_prompt(template: str, record: EvalRecord) -> str:
     )
 
 
-def judge_record(
-    record: EvalRecord, llm: LLMClient, template: str, judge_model: str, prompt_sha: str
+def _verdict(
+    record: EvalRecord,
+    correct: bool | None,
+    method: Method,
+    reason: str,
+    judge_model: str,
+    prompt_sha: str,
 ) -> JudgeVerdict:
-    def make(correct: bool | None, method: Method, reason: str) -> JudgeVerdict:
-        return JudgeVerdict(
-            question_id=record.question_id,
-            correct=correct,
-            method=method,
-            reason=reason,
-            prediction=record.prediction,
-            judge_model=judge_model,
-            prompt_sha256=prompt_sha,
-        )
+    return JudgeVerdict(
+        question_id=record.question_id,
+        correct=correct,
+        method=method,
+        reason=reason,
+        prediction=record.prediction,
+        judge_model=judge_model,
+        prompt_sha256=prompt_sha,
+    )
+
+
+def rule_verdict(
+    record: EvalRecord, judge_model: str = "", prompt_sha: str = ""
+) -> JudgeVerdict | None:
+    """The verdict the rules give without an LLM, or None when the LLM must decide."""
+
+    def make(correct: bool, reason: str) -> JudgeVerdict:
+        return _verdict(record, correct, "rule", reason, judge_model, prompt_sha)
 
     # QASPER scores the best annotator, so matching any reference exactly is correct
     if record.answer_f1 == EXACT_F1:
-        return make(True, "rule", "exact match with a reference answer")
+        return make(True, "exact match with a reference answer")
+    if record.error:
+        return make(False, "the pipeline failed on this question")
     if record.gold_unanswerable:
-        return make(record.refused, "rule", "gold is unanswerable: correct iff the model refused")
+        return make(record.refused, "gold is unanswerable: correct iff the model refused")
     if record.refused:
-        return make(False, "rule", "the model refused a question that has an answer")
+        return make(False, "the model refused a question that has an answer")
     if record.gold_type == "yes_no":
-        return make(record.answer_f1 == EXACT_F1, "rule", "yes/no: exact match decides")
+        return make(False, "yes/no without an exact match")
+    return None
+
+
+def judge_record(
+    record: EvalRecord, llm: LLMClient, template: str, judge_model: str, prompt_sha: str
+) -> JudgeVerdict:
+    ruled = rule_verdict(record, judge_model, prompt_sha)
+    if ruled is not None:
+        return ruled
     prompt = render_judge_prompt(template, record)
     try:
         result, _ = structured_call(llm, [{"role": "user", "content": prompt}], Verdict)
     except (LLMError, StructuredOutputError) as err:
-        return make(None, "error", str(err))
-    return make(result.correct, "llm", result.reason)
+        return _verdict(record, None, "error", str(err), judge_model, prompt_sha)
+    return _verdict(record, result.correct, "llm", result.reason, judge_model, prompt_sha)
 
 
 def _accuracy(verdicts: Sequence[JudgeVerdict]) -> float:
@@ -144,11 +168,30 @@ def current_verdicts(
     }
 
 
+def rescored_verdicts(
+    records: Sequence[EvalRecord], saved: Mapping[str, JudgeVerdict]
+) -> dict[str, JudgeVerdict]:
+    """Verdicts for rescored records without calling the LLM.
+
+    Rule verdicts are re-derived from the fresh records (rescoring can change answer_f1 or
+    refusals); LLM verdicts are taken from judge.jsonl only if the answer is unchanged.
+    Records that would need the LLM and have no such verdict are left out (not judged)."""
+    verdicts: dict[str, JudgeVerdict] = {}
+    for r in records:
+        old = saved.get(r.question_id)
+        ruled = rule_verdict(r, old.judge_model if old else "", old.prompt_sha256 if old else "")
+        if ruled is not None:
+            verdicts[r.question_id] = ruled
+        elif old is not None and old.method == "llm" and old.prediction == r.prediction:
+            verdicts[r.question_id] = old
+    return verdicts
+
+
 def judge_run(run_dir: Path, cfg: JudgeConfig, llm: LLMClient) -> dict[str, float]:
     lines = (run_dir / RECORDS_FILE).read_text(encoding="utf-8").splitlines()
     records = [EvalRecord.model_validate_json(line) for line in lines if line]
     template = cfg.prompt_template.read_text(encoding="utf-8")
-    prompt_sha = _sha(cfg.prompt_template)
+    prompt_sha = file_sha(cfg.prompt_template)
     reusable = {
         qid: v
         for qid, v in current_verdicts(records, load_verdicts(run_dir)).items()

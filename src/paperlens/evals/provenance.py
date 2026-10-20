@@ -28,7 +28,7 @@ NOT_QUERIED = "not queried"
 UNKNOWN = "unknown"
 
 
-def _sha(path: Path) -> str:
+def file_sha(path: Path) -> str:
     if not path.exists():
         return "missing"
     return hashlib.sha256(path.read_bytes()).hexdigest()[:HASH_CHARS]
@@ -62,8 +62,8 @@ def collect_meta(cfg: AppConfig, query_server: bool = True) -> dict[str, str]:
     status = _git("status", "--porcelain", "--untracked-files=no")
     digest, version = _server_info(cfg) if query_server else (NOT_QUERIED, NOT_QUERIED)
     return {
-        "meta.prompt_sha256": _sha(cfg.generation.prompt_template),
-        "meta.data_sha256": _sha(raw_path(cfg.data, cfg.data.split)),
+        "meta.prompt_sha256": file_sha(cfg.generation.prompt_template),
+        "meta.data_sha256": file_sha(raw_path(cfg.data, cfg.data.split)),
         "meta.git_sha": sha or UNKNOWN,
         "meta.git_dirty": UNKNOWN if status is None else str(bool(status)),
         "meta.llm_digest": digest,

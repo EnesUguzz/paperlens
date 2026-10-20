@@ -1,8 +1,6 @@
 import json
 from pathlib import Path
 
-import pytest
-
 from paperlens.config.models import JudgeConfig
 from paperlens.evals.aggregate import aggregate
 from paperlens.evals.judge import (
@@ -11,6 +9,7 @@ from paperlens.evals.judge import (
     judge_metrics,
     judge_record,
     judge_run,
+    rescored_verdicts,
 )
 from paperlens.evals.records import EvalRecord
 from paperlens.evals.report import METRICS_FILE, RECORDS_FILE
@@ -157,4 +156,38 @@ def test_judge_config_extra_body_is_not_shared() -> None:
     a, b = JudgeConfig(), JudgeConfig()
     a.extra_body["x"] = 1
     assert b.extra_body == {"reasoning_effort": "none"}
-    assert pytest.approx(0) == 0
+
+
+def test_errored_record_is_incorrect_without_llm() -> None:
+    llm = FakeLLM([])
+    result = verdict(make_record(error="timeout", prediction="Unanswerable"), llm)
+    assert (result.correct, result.method) == (False, "rule") and llm.calls == []
+
+
+def test_judge_run_rejudges_when_model_or_prompt_changed(tmp_path: Path) -> None:
+    run_dir = tmp_path / "run"
+    write_run(run_dir, [make_record("a")])
+    cfg = JudgeConfig(prompt_template=REPO / "prompts" / "judge.md")
+    judge_run(run_dir, cfg, FakeLLM([CORRECT]))
+    other_model = FakeLLM([CORRECT])
+    judge_run(run_dir, cfg.model_copy(update={"model": "other"}), other_model)
+    assert len(other_model.calls) == 1
+    prompt = tmp_path / "judge2.md"
+    prompt.write_text(TEMPLATE + "\nBe strict.\n")
+    other_prompt = FakeLLM([CORRECT])
+    judge_run(run_dir, cfg.model_copy(update={"prompt_template": prompt}), other_prompt)
+    assert len(other_prompt.calls) == 1
+
+
+def test_rescored_verdicts_redo_rules_and_keep_llm_verdicts() -> None:
+    stale = verdict(make_record("a", answer_f1=1.0), FakeLLM([]))  # rule: exact -> True
+    llm_old = verdict(make_record("b"), FakeLLM([CORRECT]))
+    records = [
+        make_record("a", answer_f1=0.4, gold_type="yes_no"),  # now a plain yes/no miss
+        make_record("b"),
+        make_record("c"),  # needs the LLM, never judged
+    ]
+    result = rescored_verdicts(records, {"a": stale, "b": llm_old})
+    assert result["a"].correct is False
+    assert result["b"] is llm_old
+    assert "c" not in result

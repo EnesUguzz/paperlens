@@ -135,9 +135,10 @@ def judge(
     for d in dirs:
         if (d / "records.jsonl").exists():
             metrics = judge_run(d, cfg.judge, llm)
+            agreement = metrics.get("judge.agreement_on_high_f1")
             typer.echo(
                 f"{d.name}: judge.accuracy={metrics.get('judge.accuracy', 0):.3f} "
-                f"agreement_on_high_f1={metrics.get('judge.agreement_on_high_f1', 0):.3f} "
+                f"agreement_on_high_f1={'n/a' if agreement is None else f'{agreement:.3f}'} "
                 f"error_rate={metrics.get('judge.error_rate', 0):.3f}"
             )
 
