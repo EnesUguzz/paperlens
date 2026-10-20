@@ -71,13 +71,16 @@ class DataConfig(_Section):
 
 
 class ChunkingConfig(_Section):
-    strategy: Literal["fixed", "section"] = Field(
+    strategy: Literal["fixed", "section", "semantic"] = Field(
         "fixed",
         description=(
             "What: how papers are cut. 'fixed' = sliding window of chunk_size words that "
             "ignores structure; 'section' = whole paragraphs packed up to chunk_size words, "
-            "never crossing a section. Effect: 'section' keeps chunks aligned with paragraphs "
-            "(usually higher Evidence-F1); 'fixed' can split an answer across two chunks."
+            "never crossing a section; 'semantic' = sentences packed up to chunk_size words, "
+            "split where neighbouring sentence embeddings diverge (never crossing a section). "
+            "Effect: 'section' keeps chunks aligned with paragraphs (usually higher "
+            "Evidence-F1); 'fixed' can split an answer across two chunks; 'semantic' follows "
+            "topic shifts but costs one embedding pass over all sentences when indexing."
         ),
     )
     chunk_size: int = Field(
@@ -100,6 +103,26 @@ class ChunkingConfig(_Section):
             "and duplicate text in the prompt. 0 -> smallest index, more boundary misses."
         ),
     )
+    semantic_breakpoint_percentile: float = Field(
+        90.0,
+        gt=0,
+        lt=100,
+        description=(
+            "What: 'semantic' only. A chunk is split where the distance between neighbouring "
+            "sentences exceeds this percentile of the paper's distances. Typical: 80-95. "
+            "Effect: lower -> more splits and smaller chunks; higher -> only the sharpest "
+            "topic shifts split (chunks then mostly end at chunk_size)."
+        ),
+    )
+    semantic_min_words: int = Field(
+        50,
+        ge=1,
+        description=(
+            "What: 'semantic' only. A chunk shorter than this is not split at a semantic "
+            "breakpoint. Typical: 30-80. Effect: higher -> fewer tiny chunks but breakpoints "
+            "are ignored more often; must stay below chunk_size (checked for 'semantic')."
+        ),
+    )
     include_section_title: bool = Field(
         True,
         description=(
@@ -119,6 +142,8 @@ class ChunkingConfig(_Section):
     def _overlap_smaller_than_size(self) -> ChunkingConfig:
         if self.chunk_overlap >= self.chunk_size:
             raise ValueError("chunk_overlap must be smaller than chunk_size")
+        if self.strategy == "semantic" and self.semantic_min_words >= self.chunk_size:
+            raise ValueError("semantic_min_words must be smaller than chunk_size")
         return self
 
 

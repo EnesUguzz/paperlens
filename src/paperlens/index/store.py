@@ -75,7 +75,7 @@ def build_or_load(cfg: AppConfig, papers: Sequence[Paper], embedder: Embedder) -
         else:
             log.warning("index cache incomplete, rebuilding", key=key)
 
-    chunks = [chunk for paper in papers for chunk in chunk_paper(paper, cfg.chunking)]
+    chunks = [c for paper in papers for c in chunk_paper(paper, cfg.chunking, embedder)]
     log.info("building index", key=key, papers=len(papers), chunks=len(chunks))
     dense.build(chunks)
     chunks_file.write_text("".join(c.model_dump_json() + "\n" for c in chunks), encoding="utf-8")

@@ -79,3 +79,8 @@ def test_m1b_configs_load_and_name_their_run(path: Path) -> None:
     assert cfg.eval.run_name == path.stem
     assert cfg.eval.experiment_name == "m1b"
     assert cfg.eval.reference_run == "baseline"
+
+
+def test_semantic_min_words_must_be_below_chunk_size() -> None:
+    with pytest.raises(ValidationError):
+        ChunkingConfig(strategy="semantic", chunk_size=50, semantic_min_words=50)

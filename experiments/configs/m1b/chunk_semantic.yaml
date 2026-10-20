@@ -1,0 +1,16 @@
+# Semantic chunking: sentences are embedded and a chunk is split where neighbouring sentences
+# diverge (above the 90th percentile of the paper's distances), never across sections.
+# ONE change vs baseline: chunking.strategy (chunk_size stays 200 as the upper bound).
+# This builds a NEW index (every sentence of every paper is embedded first).
+# Watch: chunk count and mean words per chunk (log line 'building index'); chunks are usually
+# smaller than 200 words, so Recall@k may drop while Evidence-F1 may rise.
+extends: ../baseline.yaml
+chunking:
+  strategy: semantic
+  chunk_size: 200
+  semantic_breakpoint_percentile: 90.0
+  semantic_min_words: 50
+eval:
+  experiment_name: m1b
+  run_name: chunk_semantic
+  reference_run: baseline
