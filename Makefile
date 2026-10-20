@@ -1,6 +1,6 @@
 CONFIG ?= experiments/configs/baseline.yaml
 
-.PHONY: setup test lint format download prepare-pdfs explain-config check-gpu index eval ablation models summarize notebook
+.PHONY: setup test lint format download prepare-pdfs explain-config check-gpu index eval ablation models summarize notebook m1b
 
 setup:
 	uv sync --extra ml
@@ -44,6 +44,13 @@ ablation:
 
 models:
 	for f in experiments/configs/m1a_models/*.yaml; do uv run paperlens eval --config $$f || exit 1; done
+	uv run paperlens summarize --out evals/results/SUMMARY.md
+
+m1b:  ## every M1b ablation vs baseline, m1b_best, then judge and the summary table (hours of GPU)
+	uv sync --extra ml --extra pdf
+	for f in experiments/configs/m1b/*.yaml; do uv run paperlens eval --config $$f || exit 1; done
+	uv run paperlens eval --config experiments/configs/m1b_best.yaml
+	uv run paperlens judge
 	uv run paperlens summarize --out evals/results/SUMMARY.md
 
 summarize:
