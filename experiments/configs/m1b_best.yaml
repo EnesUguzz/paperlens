@@ -5,7 +5,9 @@
 # Rejected (see evals/results/SUMMARY.md): rerank / hybrid_rerank (answer_f1 -.032, +1 s; in
 # per-paper mode the 30-candidate pool already covers almost the whole paper), multi_query and
 # hyde (no gain, 1.5-2x latency), prompt_v2 (refusal_recall .270 -> .216), source_docling
-# (worse on every metric; ~10% of gold evidence does not align to PDF paragraphs).
+# (worse Answer-F1, Evidence-F1, Recall@5 and latency; ~10% of gold evidence does not align to
+# PDF paragraphs).
+# The two gains are sub-additive: evidence_f1 +.172 vs +.116 and +.158 alone; ceiling .767 < .787.
 # No Answer-F1 delta in M1b had a 95% CI excluding 0, so this config is chosen on Evidence-F1.
 # Reuses the semantic index (same chunking key as m1b/chunk_semantic), so no rebuild.
 extends: baseline.yaml
