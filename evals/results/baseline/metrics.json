@@ -42,10 +42,10 @@
   "index.num_chunks": 6676.0,
   "judge.error_rate": 0.0,
   "judge.llm_calls": 186.0,
-  "judge.accuracy": 0.464,
+  "judge.accuracy": 0.48,
   "judge.accuracy.gold.extractive": 0.5954198473282443,
-  "judge.accuracy.gold.abstractive": 0.29310344827586204,
+  "judge.accuracy.gold.abstractive": 0.3103448275862069,
   "judge.accuracy.gold.yes_no": 0.4583333333333333,
-  "judge.accuracy.gold.unanswerable": 0.2702702702702703,
-  "judge.agreement_on_exact": 0.9166666666666666
+  "judge.accuracy.gold.unanswerable": 0.35135135135135137,
+  "judge.agreement_on_high_f1": 1.0
 }

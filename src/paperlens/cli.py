@@ -137,7 +137,7 @@ def judge(
             metrics = judge_run(d, cfg.judge, llm)
             typer.echo(
                 f"{d.name}: judge.accuracy={metrics.get('judge.accuracy', 0):.3f} "
-                f"agreement_on_exact={metrics.get('judge.agreement_on_exact', 0):.3f} "
+                f"agreement_on_high_f1={metrics.get('judge.agreement_on_high_f1', 0):.3f} "
                 f"error_rate={metrics.get('judge.error_rate', 0):.3f}"
             )
 

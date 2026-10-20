@@ -94,16 +94,32 @@ def test_llm_error_is_excluded_from_accuracy() -> None:
     assert metrics["judge.llm_calls"] == 2.0
 
 
-def test_judge_metrics_agreement_on_exact() -> None:
-    records = [make_record("a", answer_f1=1.0), make_record("b", answer_f1=1.0)]
+def test_exact_match_with_minority_reference_is_correct_without_llm() -> None:
+    llm = FakeLLM([])
+    refused = make_record(gold_unanswerable=True, gold_type="unanswerable", answer_f1=1.0)
+    answered = make_record("q2", gold_texts=["Unanswerable", "Yes"], answer_f1=1.0, refused=False)
+    assert verdict(refused, llm).correct is True
+    assert verdict(answered, llm).correct is True
+    assert llm.calls == []
+
+
+def test_judge_metrics_agreement_on_high_f1() -> None:
+    records = [make_record("a", answer_f1=0.9), make_record("b", answer_f1=0.9)]
     llm = FakeLLM([CORRECT, '{"reason": "no", "correct": false}'])
     verdicts = {r.question_id: verdict(r, llm) for r in records}
-    assert judge_metrics(records, verdicts)["judge.agreement_on_exact"] == 0.5
+    assert judge_metrics(records, verdicts)["judge.agreement_on_high_f1"] == 0.5
     llm = FakeLLM([CORRECT, CORRECT])
     verdicts = {r.question_id: verdict(r, llm) for r in records}
     metrics = judge_metrics(records, verdicts)
-    assert metrics["judge.agreement_on_exact"] == 1.0
+    assert metrics["judge.agreement_on_high_f1"] == 1.0
     assert metrics["judge.accuracy.gold.abstractive"] == 1.0
+
+
+def test_no_high_f1_llm_records_omits_agreement() -> None:
+    records = [make_record("a", answer_f1=0.2), make_record("b", answer_f1=1.0)]
+    llm = FakeLLM([CORRECT])
+    verdicts = {r.question_id: verdict(r, llm) for r in records}
+    assert "judge.agreement_on_high_f1" not in judge_metrics(records, verdicts)
 
 
 def write_run(run_dir: Path, records: list[EvalRecord]) -> None:

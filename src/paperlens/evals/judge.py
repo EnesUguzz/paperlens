@@ -9,7 +9,7 @@ metrics.json. rescore_run() keeps the judge.* metrics for answers that did not c
 Params: judge.model, judge.extra_body, judge.prompt_template (llm.base_url/api_key/timeouts
 are reused). Temperature is fixed to 0 so verdicts are repeatable.
 Try: Open judge.jsonl and compare the reasons with answer_f1 for long answers; check that
-judge.agreement_on_exact is >= 0.95 (a judge that rejects exact matches is not trustworthy).
+judge.agreement_on_high_f1 is >= 0.95 (a judge that rejects near-exact answers is not trusted).
 """
 
 from __future__ import annotations
@@ -32,6 +32,9 @@ from paperlens.llm.structured import StructuredOutputError, structured_call
 JUDGE_FILE = "judge.jsonl"
 JUDGE_PREFIX = "judge."
 EXACT_F1 = 1.0  # an answer with this F1 matched a reference word for word
+# LLM-judged answers with at least this F1 should almost always be judged correct; the share
+# that is (judge.agreement_on_high_f1) is the sanity check of the judge
+HIGH_F1 = 0.8
 
 Method = Literal["rule", "llm", "error"]
 
@@ -76,6 +79,9 @@ def judge_record(
             prompt_sha256=prompt_sha,
         )
 
+    # QASPER scores the best annotator, so matching any reference exactly is correct
+    if record.answer_f1 == EXACT_F1:
+        return make(True, "rule", "exact match with a reference answer")
     if record.gold_unanswerable:
         return make(record.refused, "rule", "gold is unanswerable: correct iff the model refused")
     if record.refused:
@@ -112,9 +118,9 @@ def judge_metrics(
         subset = [v for r, v in decided if r.gold_type == gold]
         if subset:
             metrics[f"judge.accuracy.gold.{gold}"] = _accuracy(subset)
-    exact = [v for r, v in decided if r.answer_f1 == EXACT_F1]
-    if exact:
-        metrics["judge.agreement_on_exact"] = _accuracy(exact)
+    high = [v for r, v in decided if v.method == "llm" and r.answer_f1 >= HIGH_F1]
+    if high:
+        metrics["judge.agreement_on_high_f1"] = _accuracy(high)
     return metrics
 
 
@@ -146,9 +152,10 @@ def judge_run(run_dir: Path, cfg: JudgeConfig, llm: LLMClient) -> dict[str, floa
     reusable = {
         qid: v
         for qid, v in current_verdicts(records, load_verdicts(run_dir)).items()
-        if v.judge_model == cfg.model and v.prompt_sha256 == prompt_sha and v.correct is not None
+        if v.method == "llm" and v.judge_model == cfg.model and v.prompt_sha256 == prompt_sha
     }
     verdicts: dict[str, JudgeVerdict] = {}
+    # only LLM verdicts are cached; rule verdicts are free and follow the current rules
     # the file is rewritten one verdict at a time (cached ones first come back in order), so
     # a killed run keeps what it has judged and the next call only asks for the rest
     cached_lines = [reusable[r.question_id] for r in records if r.question_id in reusable]
