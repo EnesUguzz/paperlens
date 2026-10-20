@@ -317,6 +317,34 @@ class GenerationConfig(_Section):
     )
 
 
+class JudgeConfig(_Section):
+    model: str = Field(
+        "qwen3:14b",
+        description=(
+            "What: Ollama model that grades answers as correct/incorrect (`paperlens judge`). "
+            "Effect: pick a different model family than the answering model (llm.model), "
+            "because models tend to favour their own answers; a weak judge disagrees with "
+            "exact matches (judge.agreement_on_exact drops)."
+        ),
+    )
+    extra_body: dict[str, Any] = Field(
+        default_factory=lambda: {"reasoning_effort": "none"},
+        description=(
+            "What: extra JSON fields sent with every judge request (same meaning as "
+            "llm.extra_body). Effect: the default turns off qwen3 thinking, which would "
+            "multiply judge time for a one-sentence verdict."
+        ),
+    )
+    prompt_template: Path = Field(
+        Path("prompts/judge.md"),
+        description=(
+            "What: judge prompt with {{question}}, {{gold}} and {{prediction}} placeholders. "
+            "Effect: wording changes how strict the judge is; its hash is stored with every "
+            "verdict, so editing it re-judges all answers."
+        ),
+    )
+
+
 class EvalConfig(_Section):
     experiment_name: str = Field("m1a", description="What: MLflow experiment name. Effect: none.")
     run_name: str = Field(
@@ -373,6 +401,7 @@ class AppConfig(BaseSettings):
     llm: LLMConfig = Field(default_factory=LLMConfig)
     generation: GenerationConfig = Field(default_factory=GenerationConfig)
     eval: EvalConfig = Field(default_factory=EvalConfig)
+    judge: JudgeConfig = Field(default_factory=JudgeConfig)
 
     @model_validator(mode="after")
     def _chunks_fit_embedder(self) -> AppConfig:

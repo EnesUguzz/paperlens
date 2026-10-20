@@ -10,6 +10,7 @@
 | `summary.py` | one table across all runs (the ablation table for the README) |
 | `stats.py` | paired bootstrap CI for run-vs-run answer-F1 differences |
 | `provenance.py` | meta.* params: prompt/data hashes, git sha, model digest |
+| `judge.py` | local LLM-as-judge: secondary `judge.*` metrics from rules + an LLM verdict (`paperlens judge`) |
 | `rescore.py` | recompute metrics/reports of saved runs without the LLM (`paperlens rescore`) |
 | `tracking.py` | MLflow logging |
 | `runner.py` | wires everything for one YAML config |

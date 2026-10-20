@@ -111,6 +111,38 @@ def rescore(
 
 
 @app.command()
+def judge(
+    config: ConfigOpt = DEFAULT_CONFIG,
+    results_dir: Path = DEFAULT_RESULTS,
+    run: Annotated[str | None, typer.Option("--run", help="One run; default: all")] = None,
+) -> None:
+    """Grade saved answers with a local LLM judge (secondary metric, resumable)."""
+    from paperlens.evals.judge import judge_run
+    from paperlens.llm.client import OpenAICompatClient
+
+    cfg = load_config(config)
+    # fixed temperature: the same answer should get the same verdict
+    llm = OpenAICompatClient(
+        cfg.llm.model_copy(
+            update={
+                "model": cfg.judge.model,
+                "extra_body": cfg.judge.extra_body,
+                "temperature": 0.0,
+            }
+        )
+    )
+    dirs = [results_dir / run] if run else sorted(d for d in results_dir.iterdir() if d.is_dir())
+    for d in dirs:
+        if (d / "records.jsonl").exists():
+            metrics = judge_run(d, cfg.judge, llm)
+            typer.echo(
+                f"{d.name}: judge.accuracy={metrics.get('judge.accuracy', 0):.3f} "
+                f"agreement_on_exact={metrics.get('judge.agreement_on_exact', 0):.3f} "
+                f"error_rate={metrics.get('judge.error_rate', 0):.3f}"
+            )
+
+
+@app.command()
 def trace(
     config: ConfigOpt = DEFAULT_CONFIG,
     question_id: Annotated[str | None, typer.Option("--question-id", help="QASPER id")] = None,

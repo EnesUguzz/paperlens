@@ -152,3 +152,46 @@ def test_rescore_expands_chunks_for_old_records_without_the_field(
 ) -> None:
     f1 = _rescore_single_citation(tmp_path, sample_paper, sample_questions, None)
     assert f1 == pytest.approx(2 / 3)
+
+
+def test_rescore_keeps_judge_metrics(
+    tmp_path: Path, sample_paper: Paper, sample_questions: list[Question]
+) -> None:
+    from paperlens.config.models import JudgeConfig
+    from paperlens.evals.judge import judge_run
+
+    cfg = AppConfig(
+        data={"data_dir": tmp_path / "data", "sample_size": None},
+        chunking={"strategy": "fixed", "chunk_size": 10, "chunk_overlap": 2},
+        embedding={"model_name": "hashing"},
+        retrieval={"method": "dense", "top_k": 3},
+        generation={"prompt_template": REPO / "prompts" / "baseline_answer.md"},
+        eval={
+            "run_name": "orig",
+            "reference_run": None,
+            "results_dir": tmp_path / "results",
+            "mlflow_tracking_uri": f"sqlite:///{tmp_path / 'mlflow.db'}",
+            "k_values": [1, 3],
+        },
+    )
+    llm = FakeLLM(
+        [
+            '{"answer_type": "extractive", "answer": "SQuAD", "evidence": [1, 2]}',
+            '{"answer_type": "yes_no", "answer": "No", "evidence": []}',
+            '{"answer_type": "abstractive", "answer": "81.2", "evidence": [1]}',
+        ]
+    )
+    dataset = ([sample_paper], sample_questions)
+    run_experiment(cfg, dataset=dataset, embedder=HashingEmbedder(), llm=llm)
+    run_dir = tmp_path / "results" / "orig"
+    verdicts = FakeLLM(['{"reason": "ok", "correct": true}'] * 3)
+    judged = judge_run(
+        run_dir, JudgeConfig(prompt_template=REPO / "prompts" / "judge.md"), verdicts
+    )
+    assert "judge.accuracy" in judged
+    rescored = rescore_run(run_dir, dataset=dataset)
+    assert rescored.metrics["judge.accuracy"] == judged["judge.accuracy"]
+    assert (
+        json.loads((run_dir / "metrics.json").read_text())["judge.accuracy"]
+        == judged["judge.accuracy"]
+    )

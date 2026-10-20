@@ -20,6 +20,7 @@ from typing import Any
 from paperlens.config.models import AppConfig
 from paperlens.domain import Answer, Chunk, Paper, PipelineResult, Question, ScoredChunk, Usage
 from paperlens.evals.aggregate import aggregate
+from paperlens.evals.judge import current_verdicts, judge_metrics, load_verdicts
 from paperlens.evals.provenance import collect_meta
 from paperlens.evals.records import build_record
 from paperlens.evals.report import (
@@ -104,6 +105,8 @@ def rescore_run(
 
     metrics = aggregate(records, k_values)
     metrics["index.num_chunks"] = float(len(chunks))
+    # judge verdicts are LLM output and cannot be recomputed; keep those whose answer is unchanged
+    metrics.update(judge_metrics(records, current_verdicts(records, load_verdicts(run_dir))))
     if "meta.prompt_sha256" not in params:
         params.update(collect_meta(cfg, query_server=False))
         params.update(UNRECORDED)

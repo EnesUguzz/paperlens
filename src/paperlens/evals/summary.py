@@ -27,6 +27,7 @@ HEADLINE_METRICS = (
     "refusal_recall",
     "false_refusal_rate",
     "error_rate",
+    "judge.accuracy",
     "latency_p95_ms",
 )
 
