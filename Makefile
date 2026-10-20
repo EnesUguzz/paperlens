@@ -1,6 +1,6 @@
 CONFIG ?= experiments/configs/baseline.yaml
 
-.PHONY: setup test lint format download explain-config check-gpu index eval ablation models summarize
+.PHONY: setup test lint format download explain-config check-gpu index eval ablation models summarize notebook
 
 setup:
 	uv sync --extra ml
@@ -44,3 +44,7 @@ models:
 
 summarize:
 	uv run paperlens summarize --out evals/results/SUMMARY.md
+
+notebook:  ## step-by-step RAG walkthrough in JupyterLab (http://localhost:8888)
+	uv sync --extra ml --group notebook
+	uv run jupyter lab --no-browser notebooks/
