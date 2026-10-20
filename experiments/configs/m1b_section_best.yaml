@@ -1,0 +1,16 @@
+# Candidate to m1b_best: M1a section chunking + paragraph citations.
+# Why: m1a/chunk_section_200 matched or beat m1b/chunk_semantic on Answer-F1, Evidence-F1,
+# judge accuracy and latency, but was never combined with generation.cite_unit: paragraph.
+# Same two-change shape as m1b_best.yaml, only the chunking strategy differs; reuses the
+# section_200 index (section chunks carry paragraph segments), so no rebuild.
+extends: baseline.yaml
+chunking:
+  strategy: section        # paragraph-aligned, never crosses a section
+  chunk_size: 200
+  chunk_overlap: 0         # unused by 'section'
+generation:
+  cite_unit: paragraph
+eval:
+  experiment_name: m1b
+  run_name: m1b_section_best
+  reference_run: baseline
