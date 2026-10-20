@@ -2,7 +2,15 @@ from pathlib import Path
 
 import pytest
 
-from paperlens.domain import Chunk, PipelineResult, Question, Reference, ScoredChunk, Usage
+from paperlens.domain import (
+    Chunk,
+    PipelineResult,
+    Question,
+    Reference,
+    ScoredChunk,
+    Segment,
+    Usage,
+)
 from paperlens.llm.client import LLMError
 from paperlens.llm.fake import FakeLLM
 from paperlens.pipelines.baseline import NO_PASSAGES, BaselinePipeline
@@ -108,3 +116,42 @@ def test_default_pipeline_has_no_query_error_and_normal_usage() -> None:
     _, result = run('{"answer_type": "extractive", "answer": "x", "evidence": [1]}')
     assert result.query_error is None
     assert result.answer.usage.prompt_tokens == FakeLLM.PROMPT_TOKENS
+
+
+def seg_chunk(cid: str, section: str, pids: list[str]) -> ScoredChunk:
+    segments = [Segment(paragraph_id=p, text=f"text of {p}") for p in pids]
+    chunk = Chunk(
+        chunk_id=cid,
+        paper_id="P",
+        section=section,
+        text=" ".join(s.text for s in segments),
+        paragraph_ids=pids,
+        segments=segments,
+    )
+    return ScoredChunk(chunk=chunk, score=0.5)
+
+
+SEG_CHUNKS = [
+    seg_chunk("P::c0", "Intro", ["P::a", "P::b"]),
+    seg_chunk("P::c1", "Data", ["P::c", "P::d"]),
+]
+
+
+def test_paragraph_mode_numbers_segments_across_chunks() -> None:
+    from paperlens.pipelines.baseline import format_paragraph_context
+
+    context, numbered = format_paragraph_context(SEG_CHUNKS)
+    assert [s.paragraph_id for _, s in numbered] == ["P::a", "P::b", "P::c", "P::d"]
+    assert "Passage from section: Intro" in context and "Passage from section: Data" in context
+    assert "[1] text of P::a" in context and "[4] text of P::d" in context
+
+
+def test_paragraph_mode_cites_exact_paragraphs() -> None:
+    llm = FakeLLM(['{"answer_type": "extractive", "answer": "x", "evidence": [2, 2, 9]}'])
+    pipe = BaselinePipeline(
+        StubRetriever(SEG_CHUNKS), llm, TEMPLATE, {"P": "T"}, cite_unit="paragraph"
+    )
+    answer = pipe.run(QUESTION).answer
+    assert answer.evidence_ids == ["P::b"]
+    assert answer.citations == ["P::c0"]
+    assert "[3] text of P::c" in llm.calls[0][0][0]["content"]

@@ -24,6 +24,14 @@ No reference run: showing absolute metrics only.
 | false_refusal_rate | 0.047 | - | - |
 | gold_recall | 0.434 | - | - |
 | index.num_chunks | 6676.000 | - | - |
+| judge.accuracy | 0.492 | - | - |
+| judge.accuracy.gold.abstractive | 0.431 | - | - |
+| judge.accuracy.gold.extractive | 0.580 | - | - |
+| judge.accuracy.gold.unanswerable | 0.270 | - | - |
+| judge.accuracy.gold.yes_no | 0.500 | - | - |
+| judge.agreement_on_high_f1 | 0.944 | - | - |
+| judge.error_rate | 0.000 | - | - |
+| judge.llm_calls | 164.000 | - | - |
 | latency_p50_ms | 684.335 | - | - |
 | latency_p95_ms | 972.827 | - | - |
 | n.abstractive | 58.000 | - | - |
@@ -37,6 +45,7 @@ No reference run: showing absolute metrics only.
 | n_questions | 250.000 | - | - |
 | prompt_tokens_max | 2042.000 | - | - |
 | prompt_tokens_mean | 1676.652 | - | - |
+| query_error_rate | 0.000 | - | - |
 | refusal_recall | 0.162 | - | - |
 | retrieval.doc_hit_rate | 1.000 | - | - |
 | retrieval.mrr | 0.552 | - | - |

@@ -98,6 +98,7 @@ def _rescore_single_citation(
     sample_paper: Paper,
     sample_questions: list[Question],
     cited_paragraph_ids: list[str] | None,
+    cite_unit: str = "chunk",
 ) -> float:
     """Run once, then rewrite the run so q1 cites one 2-paragraph chunk; return rescored evidence_f1."""
     cfg = AppConfig(
@@ -105,7 +106,10 @@ def _rescore_single_citation(
         chunking={"strategy": "fixed", "chunk_size": 10, "chunk_overlap": 2},
         embedding={"model_name": "hashing"},
         retrieval={"method": "dense", "top_k": 3},
-        generation={"prompt_template": REPO / "prompts" / "baseline_answer.md"},
+        generation={
+            "prompt_template": REPO / "prompts" / "baseline_answer.md",
+            "cite_unit": cite_unit,
+        },
         eval={
             "run_name": "orig",
             "reference_run": None,
@@ -195,3 +199,14 @@ def test_rescore_keeps_judge_metrics(
         json.loads((run_dir / "metrics.json").read_text())["judge.accuracy"]
         == judged["judge.accuracy"]
     )
+
+
+def test_rescore_of_paragraph_run_keeps_evidence_f1(
+    tmp_path: Path, sample_paper: Paper, sample_questions: list[Question]
+) -> None:
+    # paragraph mode: the ceiling must be recomputed per paragraph, and the model's exact
+    # paragraph citation kept, so a single cited paragraph of a 2-paragraph chunk scores 1.0
+    f1 = _rescore_single_citation(
+        tmp_path, sample_paper, sample_questions, ["1234.5678::s0p1"], cite_unit="paragraph"
+    )
+    assert f1 == 1.0

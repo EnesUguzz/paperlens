@@ -4,7 +4,7 @@ Purpose: The simplest pipeline that can score on QASPER. M2's agentic graph is j
 how much it improves on this, at what extra latency.
 Flow: Question -> plan() (identity unless a transformer is set) -> Retriever.retrieve() -> numbered context -> prompt -> structured_call()
 -> AnswerDraft -> Answer (with citations and evidence paragraph ids) -> evals.
-Params: generation.prompt_template, retrieval.* (through the Retriever), llm.* (through
+Params: generation.prompt_template, generation.cite_unit (chunk or paragraph citations), retrieval.* (through the Retriever), llm.* (through
 the client).
 Try: Edit prompts/baseline_answer.md (e.g. drop the "shortest exact span" rule) and
 compare answer_f1.extractive in the report - prompt wording is a parameter too.
@@ -14,7 +14,7 @@ from __future__ import annotations
 
 import time
 from collections.abc import Mapping, Sequence
-from typing import Protocol
+from typing import Literal, Protocol
 
 from pydantic import BaseModel, Field
 
@@ -25,6 +25,7 @@ from paperlens.domain import (
     PipelineResult,
     Question,
     ScoredChunk,
+    Segment,
 )
 from paperlens.llm.client import LLMClient, LLMError
 from paperlens.llm.structured import StructuredOutputError, structured_call
@@ -60,6 +61,25 @@ def format_context(retrieved: Sequence[ScoredChunk]) -> str:
     )
 
 
+def format_paragraph_context(
+    retrieved: Sequence[ScoredChunk],
+) -> tuple[str, list[tuple[ScoredChunk, Segment]]]:
+    """Number every paragraph segment across the whole context (1-based), grouped by chunk.
+
+    Returns the context text and the (chunk, segment) behind each number, in order."""
+    if not retrieved:
+        return NO_PASSAGES, []
+    numbered: list[tuple[ScoredChunk, Segment]] = []
+    blocks: list[str] = []
+    for sc in retrieved:
+        lines = [f"Passage from section: {sc.chunk.section}"]
+        for segment in sc.chunk.segments:
+            numbered.append((sc, segment))
+            lines.append(f"[{len(numbered)}] {segment.text}")
+        blocks.append("\n".join(lines))
+    return "\n\n".join(blocks), numbered
+
+
 def render_prompt(template: str, title: str, context: str, question: str) -> str:
     return (
         template.replace("{{title}}", title)
@@ -76,6 +96,7 @@ class BaselinePipeline:
         template: str,
         titles: Mapping[str, str],
         transformer: QueryTransformer | None = None,
+        cite_unit: Literal["chunk", "paragraph"] = "chunk",
     ) -> None:
         missing = [p for p in PLACEHOLDERS if p not in template]
         if missing:
@@ -85,15 +106,24 @@ class BaselinePipeline:
         self._template = template
         self._titles = titles
         self._transformer = transformer or IdentityTransformer()
+        self._cite_unit = cite_unit
 
     def build_prompt(self, question: Question, retrieved: Sequence[ScoredChunk]) -> str:
         """The exact text sent to the LLM (also shown by `paperlens trace`)."""
         return render_prompt(
             self._template,
             title=self._titles.get(question.paper_id, ""),
-            context=format_context(retrieved),
+            context=self._context(retrieved)[0],
             question=question.question,
         )
+
+    def _context(
+        self, retrieved: Sequence[ScoredChunk]
+    ) -> tuple[str, list[tuple[ScoredChunk, Segment]]]:
+        """Context text plus, in paragraph mode, the (chunk, segment) behind each number."""
+        if self._cite_unit == "paragraph":
+            return format_paragraph_context(retrieved)
+        return format_context(retrieved), []
 
     def plan(self, question: Question) -> QueryPlan:
         """The texts to search with (the question itself unless a transformer is set)."""
@@ -111,7 +141,11 @@ class BaselinePipeline:
         started = time.perf_counter()
         retrieved = self.retrieve(question, plan)
         retrieval_ms = (time.perf_counter() - started) * 1000
-        messages = [{"role": "user", "content": self.build_prompt(question, retrieved)}]
+        context, numbered = self._context(retrieved)
+        prompt = render_prompt(
+            self._template, self._titles.get(question.paper_id, ""), context, question.question
+        )
+        messages = [{"role": "user", "content": prompt}]
         try:
             draft, usage = structured_call(self._llm, messages, AnswerDraft)
         except (LLMError, StructuredOutputError) as err:
@@ -131,19 +165,21 @@ class BaselinePipeline:
             )
 
         refused = draft.answer_type == "unanswerable"
-        cited = (
-            []
-            if refused
-            else [
-                retrieved[i - 1] for i in dict.fromkeys(draft.evidence) if 1 <= i <= len(retrieved)
-            ]
-        )
+        picks = [] if refused else list(dict.fromkeys(draft.evidence))
+        if self._cite_unit == "paragraph":
+            hits = [numbered[i - 1] for i in picks if 1 <= i <= len(numbered)]
+            citations = list(dict.fromkeys(sc.chunk.chunk_id for sc, _ in hits))
+            evidence_ids = list(dict.fromkeys(seg.paragraph_id for _, seg in hits))
+        else:
+            cited = [retrieved[i - 1] for i in picks if 1 <= i <= len(retrieved)]
+            citations = [sc.chunk.chunk_id for sc in cited]
+            evidence_ids = list(dict.fromkeys(p for sc in cited for p in sc.chunk.paragraph_ids))
         answer = Answer(
             question_id=question.question_id,
             answer_type=draft.answer_type,
             text=UNANSWERABLE_TEXT if refused else draft.answer.strip(),
-            citations=[sc.chunk.chunk_id for sc in cited],
-            evidence_ids=list(dict.fromkeys(pid for sc in cited for pid in sc.chunk.paragraph_ids)),
+            citations=citations,
+            evidence_ids=evidence_ids,
             refused=refused,
             usage=plan.usage + usage,
         )

@@ -50,12 +50,22 @@ class Question(BaseModel):
     references: list[Reference]
 
 
+class Segment(BaseModel):
+    """The part of one paragraph that falls inside a chunk (the unit of paragraph citations)."""
+
+    paragraph_id: str
+    text: str
+
+
 class Chunk(BaseModel):
     chunk_id: str
     paper_id: str
     section: str
     text: str
     paragraph_ids: list[str]
+    # Consecutive paragraph pieces; joined with spaces they give `text` without its
+    # "[section] " prefix. Empty only for caches written before segments existed.
+    segments: list[Segment] = []
 
 
 class ScoredChunk(BaseModel):

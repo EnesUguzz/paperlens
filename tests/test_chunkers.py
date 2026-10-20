@@ -66,3 +66,29 @@ def test_chunk_ids_are_unique_and_stable(sample_paper: Paper) -> None:
 def test_empty_paper_gives_no_chunks() -> None:
     empty = Paper(paper_id="x", title="t", abstract="", paragraphs=[])
     assert chunk_paper(empty, cfg(chunk_size=10, chunk_overlap=2)) == []
+
+
+def test_fixed_chunk_segments_rebuild_chunk_text(sample_paper: Paper) -> None:
+    chunks = chunk_paper(sample_paper, cfg(strategy="fixed", chunk_size=10, chunk_overlap=2))
+    for c in chunks:
+        assert " ".join(s.text for s in c.segments) == c.text
+        assert [s.paragraph_id for s in c.segments] == c.paragraph_ids
+
+
+def test_segments_exclude_the_section_prefix(sample_paper: Paper) -> None:
+    chunks = chunk_paper(
+        sample_paper,
+        cfg(strategy="fixed", chunk_size=10, chunk_overlap=2, include_section_title=True),
+    )
+    for c in chunks:
+        prefix = f"[{c.section}] "
+        assert c.text.startswith(prefix)
+        assert " ".join(s.text for s in c.segments) == c.text[len(prefix) :]
+
+
+def test_section_chunk_segments_are_whole_paragraphs(sample_paper: Paper) -> None:
+    chunks = chunk_paper(sample_paper, cfg(strategy="section", chunk_size=20, chunk_overlap=0))
+    by_id = {p.paragraph_id: p.text for p in sample_paper.paragraphs}
+    for c in chunks:
+        assert [s.paragraph_id for s in c.segments] == c.paragraph_ids
+        assert all(s.text == by_id[s.paragraph_id] for s in c.segments)

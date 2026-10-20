@@ -12,12 +12,13 @@ Recall@k and Evidence-F1 move in opposite directions.
 from __future__ import annotations
 
 from collections.abc import Sequence
+from itertools import groupby
 
 from paperlens.config.models import ChunkingConfig
-from paperlens.domain import Chunk, Paper, Paragraph
+from paperlens.domain import Chunk, Paper, Paragraph, Segment
 
-# (section, text, paragraph_ids) before ids and prefixes are attached
-_Piece = tuple[str, str, list[str]]
+# (section, text, paragraph_ids, segments) before ids and prefixes are attached
+_Piece = tuple[str, str, list[str], list[Segment]]
 
 
 def chunk_paper(paper: Paper, cfg: ChunkingConfig) -> list[Chunk]:
@@ -33,8 +34,9 @@ def chunk_paper(paper: Paper, cfg: ChunkingConfig) -> list[Chunk]:
             section=section,
             text=f"[{section}] {text}" if cfg.include_section_title else text,
             paragraph_ids=paragraph_ids,
+            segments=segments,
         )
-        for i, (section, text, paragraph_ids) in enumerate(pieces)
+        for i, (section, text, paragraph_ids, segments) in enumerate(pieces)
     ]
 
 
@@ -49,7 +51,12 @@ def _fixed(paragraphs: Sequence[Paragraph], size: int, overlap: int) -> list[_Pi
     while True:
         window = words[start : start + size]
         paragraph_ids = list(dict.fromkeys(p.paragraph_id for _, p in window))
-        pieces.append((window[0][1].section, " ".join(w for w, _ in window), paragraph_ids))
+        segments: list[Segment] = []  # consecutive words of one paragraph form one segment
+        for pid, group in groupby(window, key=lambda wp: wp[1].paragraph_id):
+            segments.append(Segment(paragraph_id=pid, text=" ".join(w for w, _ in group)))
+        pieces.append(
+            (window[0][1].section, " ".join(w for w, _ in window), paragraph_ids, segments)
+        )
         if start + size >= len(words):
             return pieces
         start += stride
@@ -68,6 +75,7 @@ def _section(paragraphs: Sequence[Paragraph], size: int) -> list[_Piece]:
                     buffer[0].section,
                     " ".join(p.text for p in buffer),
                     [p.paragraph_id for p in buffer],
+                    [Segment(paragraph_id=p.paragraph_id, text=p.text) for p in buffer],
                 )
             )
 
@@ -78,8 +86,14 @@ def _section(paragraphs: Sequence[Paragraph], size: int) -> list[_Piece]:
             buffer, buffer_words = [], 0
         if len(words) > size:  # a single paragraph longer than a chunk: split it on its own
             for start in range(0, len(words), size):
+                part = " ".join(words[start : start + size])
                 pieces.append(
-                    (para.section, " ".join(words[start : start + size]), [para.paragraph_id])
+                    (
+                        para.section,
+                        part,
+                        [para.paragraph_id],
+                        [Segment(paragraph_id=para.paragraph_id, text=part)],
+                    )
                 )
             continue
         buffer.append(para)

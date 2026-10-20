@@ -99,7 +99,7 @@ def trace_question(
     if llm is not None:
         result = pipeline.run(question, plan)
         k_values = [k for k in cfg.eval.k_values if k <= cfg.retrieval.top_k]
-        record = build_record(question, result, k_values)
+        record = build_record(question, result, k_values, cfg.generation.cite_unit)
     vector = embedder.embed_query(question.question)
     return Trace(
         question=question,

@@ -66,11 +66,14 @@ def build_or_load(cfg: AppConfig, papers: Sequence[Paper], embedder: Embedder) -
     if chunks_file.exists():
         lines = chunks_file.read_text(encoding="utf-8").splitlines()
         chunks = [Chunk.model_validate_json(line) for line in lines if line]
-        if dense.count() == len(chunks):
+        if any(c.paragraph_ids and not c.segments for c in chunks):
+            log.warning("index cache predates segments, rebuilding", key=key)
+        elif dense.count() == len(chunks):
             log.info("index cache hit", key=key, chunks=len(chunks))
             sparse = SparseIndex(chunks, cfg.retrieval.bm25_k1, cfg.retrieval.bm25_b)
             return IndexBundle(chunks, dense, sparse, cache_hit=True)
-        log.warning("index cache incomplete, rebuilding", key=key)
+        else:
+            log.warning("index cache incomplete, rebuilding", key=key)
 
     chunks = [chunk for paper in papers for chunk in chunk_paper(paper, cfg.chunking)]
     log.info("building index", key=key, papers=len(papers), chunks=len(chunks))

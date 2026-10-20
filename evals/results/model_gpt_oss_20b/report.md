@@ -30,6 +30,14 @@
 | false_refusal_rate | 0.160 | 0.042 | +0.117 |
 | gold_recall | 0.448 | 0.494 | -0.047 |
 | index.num_chunks | 6676.000 | 6676.000 | +0.000 |
+| judge.accuracy | 0.524 | 0.480 | +0.044 |
+| judge.accuracy.gold.abstractive | 0.310 | 0.310 | +0.000 |
+| judge.accuracy.gold.extractive | 0.634 | 0.595 | +0.038 |
+| judge.accuracy.gold.unanswerable | 0.568 | 0.351 | +0.216 |
+| judge.accuracy.gold.yes_no | 0.375 | 0.458 | -0.083 |
+| judge.agreement_on_high_f1 | 0.944 | 1.000 | -0.056 |
+| judge.error_rate | 0.000 | 0.000 | +0.000 |
+| judge.llm_calls | 145.000 | 163.000 | -18.000 |
 | latency_p50_ms | 2159.621 | 1042.795 | +1116.826 |
 | latency_p95_ms | 3081.897 | 1850.713 | +1231.184 |
 | n.abstractive | 60.000 | 55.000 | +5.000 |
@@ -43,6 +51,7 @@
 | n_questions | 250.000 | 250.000 | +0.000 |
 | prompt_tokens_max | 3596.000 | 2577.000 | +1019.000 |
 | prompt_tokens_mean | 1699.700 | 2228.868 | -529.168 |
+| query_error_rate | 0.000 | 0.000 | +0.000 |
 | refusal_recall | 0.459 | 0.270 | +0.189 |
 | retrieval.doc_hit_rate | 1.000 | 1.000 | +0.000 |
 | retrieval.mrr | 0.552 | 0.552 | +0.000 |

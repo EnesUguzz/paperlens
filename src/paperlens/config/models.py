@@ -408,6 +408,16 @@ class GenerationConfig(_Section):
             "extractively; version prompts like code."
         ),
     )
+    cite_unit: Literal["chunk", "paragraph"] = Field(
+        "chunk",
+        description=(
+            "What: what the model cites: 'chunk' numbers whole chunks, 'paragraph' numbers the "
+            "paragraph pieces inside each chunk. Effect: 'paragraph' removes the chunk-width "
+            "limit on Evidence-F1 (the ceiling is bounded by retrieval only), but the prompt "
+            "holds many more numbers and the model must pick among them; the index must be "
+            "built with segments (rebuilt automatically)."
+        ),
+    )
 
 
 class JudgeConfig(_Section):

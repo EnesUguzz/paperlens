@@ -101,7 +101,9 @@ def rescore_run(
             retrieved=[ScoredChunk(chunk=chunks[c], score=0.0) for c in raw["retrieved_chunk_ids"]],
             retrieval_ms=0.0,
         )
-        records.append(build_record(by_id[raw["question_id"]], result, k_values))
+        records.append(
+            build_record(by_id[raw["question_id"]], result, k_values, cfg.generation.cite_unit)
+        )
 
     metrics = aggregate(records, k_values)
     metrics["index.num_chunks"] = float(len(chunks))

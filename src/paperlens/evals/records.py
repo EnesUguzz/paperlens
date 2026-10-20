@@ -3,7 +3,7 @@
 Purpose: Keeps every number traceable to a concrete question, so a metric change in the
 report can be explained by opening the questions that moved.
 Flow: Question + PipelineResult -> build_record() -> records.jsonl -> aggregate / report.
-Params: eval.k_values.
+Params: eval.k_values, generation.cite_unit (changes how the ceiling is computed).
 Try: Open records.jsonl, filter answer_f1 == 0 and retrieval.recall_at_5 == 1: those are
 generation failures (the evidence was there, the model still missed). Compare evidence_f1
 with evidence_f1_ceiling: the ceiling is what perfect citing could reach with these chunks,
@@ -14,6 +14,7 @@ from __future__ import annotations
 
 from collections.abc import Sequence
 from itertools import combinations
+from typing import Literal
 
 from pydantic import BaseModel, Field
 
@@ -96,11 +97,21 @@ class EvalRecord(BaseModel):
     latency_ms: float
 
 
-def build_record(question: Question, result: PipelineResult, k_values: Sequence[int]) -> EvalRecord:
+def build_record(
+    question: Question,
+    result: PipelineResult,
+    k_values: Sequence[int],
+    cite_unit: Literal["chunk", "paragraph"] = "chunk",
+) -> EvalRecord:
     answer = result.answer
     prediction = prediction_text(answer)
     best = score_answer(prediction, answer.evidence_ids, question.references)
     ranked = [sc.chunk.paragraph_ids for sc in result.retrieved]
+    if cite_unit == "paragraph":  # each paragraph is citable alone, so chunk width no longer counts
+        pids = dict.fromkeys(pid for paragraph_ids in ranked for pid in paragraph_ids)
+        citable = [[pid] for pid in pids]
+    else:
+        citable = ranked
     preview = result.retrieved[0].chunk.text[:PREVIEW_CHARS] if result.retrieved else ""
     return EvalRecord(
         question_id=question.question_id,
@@ -115,7 +126,7 @@ def build_record(question: Question, result: PipelineResult, k_values: Sequence[
         error=answer.error,
         answer_f1=best.answer_f1,
         evidence_f1=best.evidence_f1,
-        evidence_f1_ceiling=evidence_ceiling(ranked, question.references),
+        evidence_f1_ceiling=evidence_ceiling(citable, question.references),
         best_ref_type=best.ref_type,
         retrieval=best_over_references(ranked, question.references, k_values),
         retrieved_chunk_ids=[sc.chunk.chunk_id for sc in result.retrieved],

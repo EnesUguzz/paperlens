@@ -13,7 +13,7 @@ If they do not, the server is not deterministic - worth knowing before comparing
 from __future__ import annotations
 
 from collections.abc import Mapping, Sequence
-from typing import Any
+from typing import Any, Literal
 
 import structlog
 
@@ -46,11 +46,15 @@ def flatten(data: Mapping[str, Any], prefix: str = "") -> dict[str, Any]:
 
 
 def evaluate(
-    questions: Sequence[Question], pipeline: Pipeline, k_values: Sequence[int], log_every: int
+    questions: Sequence[Question],
+    pipeline: Pipeline,
+    k_values: Sequence[int],
+    log_every: int,
+    cite_unit: Literal["chunk", "paragraph"] = "chunk",
 ) -> list[EvalRecord]:
     records: list[EvalRecord] = []
     for i, question in enumerate(questions, start=1):
-        records.append(build_record(question, pipeline.run(question), k_values))
+        records.append(build_record(question, pipeline.run(question), k_values, cite_unit))
         if i % log_every == 0 or i == len(questions):
             mean_f1 = sum(r.answer_f1 for r in records) / len(records)
             log.info("progress", done=i, total=len(questions), answer_f1=round(mean_f1, 3))
@@ -73,7 +77,7 @@ def run_experiment(
             cfg, bundle, llm or OpenAICompatClient(cfg.llm), {p.paper_id: p.title for p in papers}
         )
         log.info("run start", run=cfg.eval.run_name, questions=len(sample), index=index_key(cfg))
-        records = evaluate(sample, pipeline, k_values, cfg.eval.log_every)
+        records = evaluate(sample, pipeline, k_values, cfg.eval.log_every, cfg.generation.cite_unit)
     finally:
         bundle.dense.close()
 

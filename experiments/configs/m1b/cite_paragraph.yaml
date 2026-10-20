@@ -1,0 +1,12 @@
+# Paragraph-level citations: the prompt numbers the paragraph pieces inside each chunk, so the
+# model cites paragraphs instead of whole chunks and the Evidence-F1 ceiling is bounded by
+# retrieval only. ONE change vs baseline: generation.cite_unit (the index only gains stored
+# segments: same chunks and ids, so retrieval is unchanged).
+# Watch: prompt tokens grow (a number per paragraph) and the model must choose among more numbers.
+extends: ../baseline.yaml
+generation:
+  cite_unit: paragraph
+eval:
+  experiment_name: m1b
+  run_name: cite_paragraph
+  reference_run: baseline

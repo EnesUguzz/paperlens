@@ -33,6 +33,7 @@
   "refusal_recall": 0.4594594594594595,
   "false_refusal_rate": 0.1596244131455399,
   "error_rate": 0.0,
+  "query_error_rate": 0.0,
   "latency_p50_ms": 2159.6210534999045,
   "latency_p95_ms": 3081.897203600782,
   "prompt_tokens_mean": 1699.7,

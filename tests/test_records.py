@@ -169,3 +169,12 @@ def test_aggregate_reports_new_metrics(sample_questions: list[Question]) -> None
     assert m["gold_recall"] == 1.0
     assert m["answer_words_mean"] == pytest.approx(2.0)
     assert m["retrieval.doc_hit_rate"] == 0.0
+
+
+def test_paragraph_mode_ceiling_ignores_chunk_width(sample_questions: list[Question]) -> None:
+    q1 = sample_questions[0]  # gold evidence: s0p1
+    wide_result = result("q1", "extractive", "SQuAD", ["1234.5678::s0p1"])
+    wide_result = wide_result.model_copy(update={"retrieved": [WIDE_CHUNK]})
+    assert build_record(q1, wide_result, [1]).evidence_f1_ceiling == pytest.approx(2 / 3)
+    rec = build_record(q1, wide_result, [1], cite_unit="paragraph")
+    assert rec.evidence_f1_ceiling == 1.0
