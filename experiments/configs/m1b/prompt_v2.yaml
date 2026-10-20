@@ -1,0 +1,7 @@
+extends: ../baseline.yaml
+generation:
+  prompt_template: prompts/answer_v2.md   # shorter answers + QASPER's "not done = No"
+eval:
+  experiment_name: m1b
+  run_name: prompt_v2
+  reference_run: baseline

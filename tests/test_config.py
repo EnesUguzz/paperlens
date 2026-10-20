@@ -68,3 +68,14 @@ def test_explain_lists_nested_fields() -> None:
     assert "llm.model" in paths
     table = render_markdown(AppConfig())
     assert "| `retrieval.top_k` | `5` |" in table
+
+
+M1B_CONFIG_DIR = Path(__file__).resolve().parents[1] / "experiments" / "configs" / "m1b"
+
+
+@pytest.mark.parametrize("path", sorted(M1B_CONFIG_DIR.glob("*.yaml")), ids=lambda p: p.name)
+def test_m1b_configs_load_and_name_their_run(path: Path) -> None:
+    cfg = load_config(path)
+    assert cfg.eval.run_name == path.stem
+    assert cfg.eval.experiment_name == "m1b"
+    assert cfg.eval.reference_run == "baseline"
