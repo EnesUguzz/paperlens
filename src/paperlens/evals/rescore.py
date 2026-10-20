@@ -32,7 +32,7 @@ from paperlens.evals.report import (
     save_run,
 )
 from paperlens.index.store import CHUNKS_FILE, index_key
-from paperlens.ingestion.qasper import download_split, load_split
+from paperlens.ingestion.sources import resolve_dataset, sample_dataset
 
 META_PREFIX = "meta."
 REPORT_FILE = "report.md"
@@ -84,7 +84,8 @@ def rescore_run(
 ) -> RunResult:
     params: dict[str, Any] = json.loads((run_dir / PARAMS_FILE).read_text(encoding="utf-8"))
     cfg = AppConfig(**unflatten({k: v for k, v in params.items() if not k.startswith(META_PREFIX)}))
-    _, questions = dataset or load_split(download_split(cfg.data, cfg.data.split))
+    loaded = resolve_dataset(cfg.data, dataset)
+    questions = loaded.questions
     by_id = {q.question_id: q for q in questions}
     chunk_file = cfg.data.data_dir / "index" / index_key(cfg) / CHUNKS_FILE
     lines = chunk_file.read_text(encoding="utf-8").splitlines()
@@ -107,6 +108,9 @@ def rescore_run(
 
     metrics = aggregate(records, k_values)
     metrics["index.num_chunks"] = float(len(chunks))
+    dropped = sample_dataset(loaded, cfg.data.sample_size, cfg.data.seed)[1]
+    metrics["data.questions_dropped"] = float(dropped)
+    metrics.update(loaded.metrics)
     # LLM verdicts cannot be recomputed: keep those whose answer is unchanged, redo the rules
     metrics.update(judge_metrics(records, rescored_verdicts(records, load_verdicts(run_dir))))
     if "meta.prompt_sha256" not in params:

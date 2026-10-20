@@ -26,7 +26,7 @@ from paperlens.evals.report import RunResult, load_run, render_report, save_run
 from paperlens.evals.tracking import log_to_mlflow
 from paperlens.index.embedder import Embedder, build_embedder
 from paperlens.index.store import build_or_load, index_key
-from paperlens.ingestion.qasper import download_split, load_split, sample_questions
+from paperlens.ingestion.sources import resolve_dataset, sample_dataset
 from paperlens.llm.client import LLMClient, OpenAICompatClient
 from paperlens.pipelines.baseline import Pipeline
 from paperlens.pipelines.factory import build_pipeline
@@ -68,8 +68,9 @@ def run_experiment(
     embedder: Embedder | None = None,
     llm: LLMClient | None = None,
 ) -> RunResult:
-    papers, questions = dataset or load_split(download_split(cfg.data, cfg.data.split))
-    sample = sample_questions(questions, cfg.data.sample_size, cfg.data.seed)
+    loaded = resolve_dataset(cfg.data, dataset)
+    papers = loaded.papers
+    sample, dropped = sample_dataset(loaded, cfg.data.sample_size, cfg.data.seed)
     bundle = build_or_load(cfg, papers, embedder or build_embedder(cfg.embedding))
     k_values = [k for k in cfg.eval.k_values if k <= cfg.retrieval.top_k]
     try:
@@ -83,6 +84,8 @@ def run_experiment(
 
     metrics = aggregate(records, k_values)
     metrics["index.num_chunks"] = float(len(bundle.chunks))
+    metrics["data.questions_dropped"] = float(dropped)  # sampled questions without a parsed PDF
+    metrics.update(loaded.metrics)
     params = flatten(cfg.model_dump(mode="json"))
     params.update(collect_meta(cfg, query_server=llm is None))  # a fake LLM has no server
     result = RunResult(

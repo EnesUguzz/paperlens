@@ -52,12 +52,14 @@ class DataConfig(_Section):
             "comparable."
         ),
     )
-    text_source: Literal["qasper_text"] = Field(
+    text_source: Literal["qasper_text", "pdf_docling"] = Field(
         "qasper_text",
         description=(
             "What: where paper text comes from; 'qasper_text' = the dataset's pre-parsed "
-            "paragraphs. Effect: M1b adds 'pdf_docling' to measure how parser quality "
-            "changes retrieval."
+            "paragraphs, 'pdf_docling' = the arXiv PDF parsed by Docling (run `prepare-pdfs` "
+            "first; gold evidence is fuzzy-aligned to PDF paragraphs). Effect: measures how "
+            "parser quality changes retrieval; papers without a parsed PDF are dropped from "
+            "the evaluation."
         ),
     )
     data_dir: Path = Field(
@@ -82,6 +84,28 @@ class DataConfig(_Section):
             "What: seconds to wait between two PDF requests. Typical: 3-5. "
             "Effect: arXiv's automated-access rule asks for at least 3 s; lower values risk "
             "an IP block, higher values only make `prepare-pdfs` slower (cache hits never wait)."
+        ),
+    )
+    align_min_score: float = Field(
+        85.0,
+        ge=0,
+        le=100,
+        description=(
+            "What: minimum rapidfuzz partial_ratio score (0-100) for a PDF paragraph to count "
+            "as holding a gold evidence paragraph (text_source 'pdf_docling' only). "
+            "Typical: 80-95. "
+            "Effect: lower values accept wrong matches (evidence points at the wrong paragraph); "
+            "higher values leave more evidence unaligned, which then scores as never found."
+        ),
+    )
+    align_min_words: int = Field(
+        8,
+        ge=1,
+        description=(
+            "What: PDF paragraphs shorter than this many words cannot be alignment candidates "
+            "(captions are exempt; text_source 'pdf_docling' only). Typical: 5-15. "
+            "Effect: too low and a fragment such as 'Results' matches every paragraph that "
+            "contains it; too high and genuinely short paragraphs lose their evidence label."
         ),
     )
 

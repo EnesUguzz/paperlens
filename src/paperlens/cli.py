@@ -78,10 +78,10 @@ def index(config: ConfigOpt = DEFAULT_CONFIG) -> None:
     """Build (or confirm cached) indexes for a config without running the LLM."""
     from paperlens.index.embedder import build_embedder
     from paperlens.index.store import build_or_load
-    from paperlens.ingestion.qasper import download_split, load_split
+    from paperlens.ingestion.sources import load_dataset
 
     cfg = load_config(config)
-    papers, _ = load_split(download_split(cfg.data, cfg.data.split))
+    papers = load_dataset(cfg.data).papers
     bundle = build_or_load(cfg, papers, build_embedder(cfg.embedding))
     typer.echo(f"chunks: {len(bundle.chunks)}, cache hit: {bundle.cache_hit}")
     bundle.dense.close()

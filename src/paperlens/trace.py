@@ -25,7 +25,7 @@ from paperlens.domain import Paper, PipelineResult, Question, ScoredChunk
 from paperlens.evals.records import EvalRecord, build_record
 from paperlens.index.embedder import Embedder, build_embedder
 from paperlens.index.store import IndexBundle, build_or_load
-from paperlens.ingestion.qasper import download_split, load_split, sample_questions
+from paperlens.ingestion.sources import resolve_dataset, sample_dataset
 from paperlens.llm.client import LLMClient, LLMError, LLMResponse, Message, OpenAICompatClient
 from paperlens.pipelines.factory import build_pipeline
 from paperlens.retrieval.query import QueryPlan
@@ -131,17 +131,22 @@ def run_trace(
     llm: LLMClient | None = None,
 ) -> str:
     """Pick a question (by id, or by position in the eval sample) and render its trace."""
-    papers, questions = dataset or load_split(download_split(cfg.data, cfg.data.split))
+    loaded = resolve_dataset(cfg.data, dataset)
+    papers = loaded.papers
     if question_id is not None:
-        found = [q for q in questions if q.question_id == question_id]
+        found = [q for q in loaded.questions if q.question_id == question_id]
         if not found:
             raise ValueError(f"question_id {question_id!r} is not in split {cfg.data.split!r}")
         question = found[0]
     else:
-        sample = sample_questions(questions, cfg.data.sample_size, cfg.data.seed)
+        sample, _ = sample_dataset(loaded, cfg.data.sample_size, cfg.data.seed)
         if not 0 <= index < len(sample):
             raise ValueError(f"index {index} is outside the sample (0..{len(sample) - 1})")
         question = sample[index]
+    if question.paper_id in loaded.missing_paper_ids:
+        raise ValueError(
+            f"paper {question.paper_id!r} has no parsed PDF (text_source is pdf_docling)"
+        )
     paper = next(p for p in papers if p.paper_id == question.paper_id)
     embedder = embedder or build_embedder(cfg.embedding)
     bundle = build_or_load(cfg, papers, embedder)

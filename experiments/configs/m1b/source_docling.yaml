@@ -1,0 +1,16 @@
+# Text source: the paper text comes from the arXiv PDF parsed by Docling instead of QASPER's own
+# pre-parsed paragraphs. ONE change vs baseline: data.text_source.
+# Needs `make prepare-pdfs` first. Papers without a parsed PDF are dropped from the evaluation
+# (metric data.questions_dropped); the sample is drawn from the same question ids as the baseline.
+# This builds a NEW index. Gold evidence is fuzzy-aligned to PDF paragraphs.
+# Watch: data.evidence_aligned_rate (below 0.8 means the comparison is dominated by alignment
+# loss, not parser quality), data.evidence_split_rate, data.papers_missing, and Evidence-F1.
+extends: ../baseline.yaml
+data:
+  text_source: pdf_docling
+  align_min_score: 85.0
+  align_min_words: 8
+eval:
+  experiment_name: m1b
+  run_name: source_docling
+  reference_run: baseline
