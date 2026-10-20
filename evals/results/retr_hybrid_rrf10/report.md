@@ -24,7 +24,7 @@
 | context_words_mean | 1001.932 | 998.848 | +3.084 |
 | error_rate | 0.000 | 0.000 | +0.000 |
 | evidence_f1 | 0.310 | 0.297 | +0.013 |
-| evidence_f1_ceiling | 0.478 | 0.471 | +0.007 |
+| evidence_f1_ceiling | 0.535 | 0.524 | +0.011 |
 | false_refusal_rate | 0.038 | 0.042 | -0.005 |
 | index.num_chunks | 6676.000 | 6676.000 | +0.000 |
 | latency_p50_ms | 1063.629 | 1042.795 | +20.835 |

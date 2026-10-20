@@ -49,19 +49,20 @@ was made on behaviour across answer types and on latency.
 
 Baseline: fixed 200-word chunks, 40 overlap, dense bge-m3, top_k 5. Δ = paired difference
 in answer F1 vs baseline, 95% bootstrap CI. Evidence ceiling = the Evidence-F1 a perfect
-citer would reach with the retrieved chunks (a cited chunk counts all its paragraphs).
+citer would reach with the best subset of the retrieved chunks (a cited chunk counts all its
+paragraphs).
 
 | Change | answer F1 | Δ [95% CI] | evidence F1 / ceiling | Recall@5 | context words | p95 |
 |---|---|---|---|---|---|---|
-| baseline | 0.419 | | 0.297 / 0.471 | 0.703 | 999 | 1.9 s |
-| **top_k 10** | **0.456** | **+0.037 [+0.007, +0.066]** | 0.303 / 0.522 | 0.703 | 1984 | 2.4 s |
-| section-aware chunks | 0.442 | +0.024 [-0.013, +0.058] | 0.425 / 0.663 | 0.665 | 689 | 1.5 s |
-| hybrid, RRF k=10 | 0.424 | +0.005 [-0.024, +0.036] | 0.310 / 0.478 | 0.727 | 1002 | 1.8 s |
-| fixed 400-word chunks | 0.423 | +0.005 [-0.028, +0.039] | 0.222 / 0.416 | **0.856** | 1929 | 2.2 s |
-| hybrid, RRF k=60 | 0.420 | +0.002 [-0.027, +0.032] | 0.304 / 0.481 | 0.728 | 1001 | 1.9 s |
-| fixed 100-word chunks | 0.417 | -0.002 [-0.040, +0.032] | 0.343 / 0.562 | 0.673 | 511 | 1.5 s |
-| top_k 3 | 0.403 | -0.016 [-0.047, +0.015] | 0.300 / 0.445 | - | 600 | 1.5 s |
-| BM25 only | 0.370 | **-0.049 [-0.090, -0.010]** | 0.270 / 0.425 | 0.606 | 974 | 1.8 s |
+| baseline | 0.419 | | 0.297 / 0.524 | 0.703 | 999 | 1.9 s |
+| **top_k 10** | **0.456** | **+0.037 [+0.007, +0.066]** | 0.303 / 0.621 | 0.703 | 1984 | 2.4 s |
+| section-aware chunks | 0.442 | +0.024 [-0.013, +0.058] | 0.425 / 0.664 | 0.665 | 689 | 1.5 s |
+| hybrid, RRF k=10 | 0.424 | +0.005 [-0.024, +0.036] | 0.310 / 0.535 | 0.727 | 1002 | 1.8 s |
+| fixed 400-word chunks | 0.423 | +0.005 [-0.028, +0.039] | 0.222 / 0.466 | **0.856** | 1929 | 2.2 s |
+| hybrid, RRF k=60 | 0.420 | +0.002 [-0.027, +0.032] | 0.304 / 0.534 | 0.728 | 1001 | 1.9 s |
+| fixed 100-word chunks | 0.417 | -0.002 [-0.040, +0.032] | 0.343 / 0.621 | 0.673 | 511 | 1.5 s |
+| top_k 3 | 0.403 | -0.016 [-0.047, +0.015] | 0.300 / 0.473 | - | 600 | 1.5 s |
+| BM25 only | 0.370 | **-0.049 [-0.090, -0.010]** | 0.270 / 0.471 | 0.606 | 974 | 1.8 s |
 
 Sixteen comparisons at 95% without correction: about one CI could exclude 0 by chance, so
 treat a single "significant" row (top_k 10 included) as a lead to confirm on the full
@@ -78,9 +79,10 @@ last digit); latency is not — the same config measured 1.9 s and 2.1 s p95 on 
 - **Recall is not the goal.** 400-word chunks raise Recall@5 from 0.70 to 0.86, yet answer F1
   does not move.
 - **Evidence-F1 measures chunking as much as the model.** Section-aware chunks raise
-  Evidence-F1 from 0.30 to 0.43, but the ceiling rises just as much (0.47→0.66): the model
-  cites about as well as before (~0.64 of the ceiling) — the chunks are simply paragraph-sized,
-  so a correct citation carries less extra text. Evidence-F1 is only comparable at equal
+  Evidence-F1 from 0.30 to 0.43, mostly because the ceiling rises (0.52→0.66): the chunks are
+  paragraph-sized, so a correct citation carries less extra text. The model also gets closer to
+  that ceiling (0.64 vs 0.57 of it), since overlapping fixed windows repeat the gold paragraph
+  in two chunks and citing both only adds noise. Evidence-F1 is only comparable at equal
   chunking; M1b will have the model cite paragraphs instead of chunks.
 - **BM25 alone loses (-0.049); fusing it with dense adds little here** — questions are
   paraphrased, and single-paper retrieval leaves few lexical distractors.

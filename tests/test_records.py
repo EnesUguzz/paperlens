@@ -112,6 +112,25 @@ def test_evidence_ceiling_reflects_chunk_granularity(sample_questions: list[Ques
     assert rec.gold_type == "extractive"
 
 
+def test_evidence_ceiling_is_the_best_subset_when_gold_chunks_overlap() -> None:
+    # gold paragraph "a" sits in two overlapping 5-paragraph chunks (fixed chunking overlap):
+    # citing one gives F1 = 2*(1/5)*1 / (1/5 + 1) = 1/3; citing both (9 paragraphs) gives 0.2
+    from paperlens.evals.records import evidence_ceiling
+
+    ref = Reference(answer_type="extractive", answer_text="x", evidence_ids=["a"])
+    ranked = [["a", "b", "c", "d", "e"], ["e", "f", "g", "h", "a"]]
+    assert evidence_ceiling(ranked, [ref]) == pytest.approx(1 / 3)
+
+
+def test_evidence_ceiling_is_never_below_a_real_citation(sample_questions: list[Question]) -> None:
+    # a real, scored citation can only be at or below the ceiling
+    from paperlens.evals.records import evidence_ceiling
+
+    ref = Reference(answer_type="extractive", answer_text="x", evidence_ids=["a", "f"])
+    ranked = [["a", "b"], ["a", "c", "d"], ["f"], ["z"]]
+    assert evidence_ceiling(ranked, [ref]) == pytest.approx(0.8)  # cite [a,b] + [f]
+
+
 def test_aggregate_reports_gold_type_buckets_and_ceiling(sample_questions: list[Question]) -> None:
     q1, q2, _ = sample_questions
     records = [

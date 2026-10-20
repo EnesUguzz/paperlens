@@ -13,6 +13,7 @@ so the gap is the model's citation error and the ceiling itself is the chunking'
 from __future__ import annotations
 
 from collections.abc import Sequence
+from itertools import combinations
 
 from pydantic import BaseModel
 
@@ -27,19 +28,39 @@ from paperlens.evals.answer_metrics import (
 from paperlens.evals.retrieval_metrics import best_over_references
 
 PREVIEW_CHARS = 300
+MAX_EXACT_CHUNKS = 12  # 2^12 subsets per reference; beyond this the ceiling is greedy
+
+
+def _best_citation_f1(candidates: Sequence[frozenset[str]], gold: list[str]) -> float:
+    """Best paragraph-F1 over every subset of the gold-bearing chunks (none cited included)."""
+    best = paragraph_f1([], gold)
+    if len(candidates) <= MAX_EXACT_CHUNKS:
+        for size in range(1, len(candidates) + 1):
+            for combo in combinations(candidates, size):
+                best = max(best, paragraph_f1(sorted(frozenset().union(*combo)), gold))
+        return best
+    cited: frozenset[str] = frozenset()  # greedy fallback for very large top_k
+    while True:
+        options = [(paragraph_f1(sorted(cited | c), gold), c) for c in candidates if not c <= cited]
+        if not options or max(options)[0] <= best:
+            return best
+        best, chosen = max(options)
+        cited |= chosen
 
 
 def evidence_ceiling(ranked: Sequence[Sequence[str]], references: Sequence[Reference]) -> float:
-    """Best Evidence-F1 reachable by citing exactly the retrieved chunks that hold gold.
+    """Best Evidence-F1 reachable by citing the best subset of the retrieved chunks.
 
     A citation is a whole chunk, so its paragraphs all count as predicted evidence: with
-    big chunks even a perfect citer pays a precision penalty. Evidence-F1 is therefore
-    only comparable across runs with the same chunking; compare evidence_f1 / ceiling."""
+    big chunks even a perfect citer pays a precision penalty. Citing every gold-bearing
+    chunk is not always best: overlapping chunks repeat a gold paragraph and only add
+    noise, so the ceiling searches the subsets. Evidence-F1 is therefore only comparable
+    across runs with the same chunking; compare evidence_f1 / ceiling."""
     best = 0.0
     for ref in references:
         gold = set(ref.evidence_ids)
-        cited = {pid for chunk in ranked if gold & set(chunk) for pid in chunk}
-        best = max(best, paragraph_f1(sorted(cited), ref.evidence_ids))
+        candidates = list(dict.fromkeys(frozenset(c) for c in ranked if gold & set(c)))
+        best = max(best, _best_citation_f1(candidates, ref.evidence_ids))
     return best
 
 

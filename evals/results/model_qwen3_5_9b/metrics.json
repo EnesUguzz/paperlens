@@ -2,7 +2,7 @@
   "n_questions": 250.0,
   "answer_f1": 0.38080312911617636,
   "evidence_f1": 0.30569727331492036,
-  "evidence_f1_ceiling": 0.4709860472516819,
+  "evidence_f1_ceiling": 0.5238208680208679,
   "n.extractive": 138.0,
   "answer_f1.extractive": 0.4669839044578806,
   "n.gold.extractive": 131.0,

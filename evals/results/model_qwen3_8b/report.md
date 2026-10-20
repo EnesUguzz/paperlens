@@ -19,7 +19,7 @@ No reference run: showing absolute metrics only.
 | context_words_mean | 998.848 | - | - |
 | error_rate | 0.000 | - | - |
 | evidence_f1 | 0.265 | - | - |
-| evidence_f1_ceiling | 0.471 | - | - |
+| evidence_f1_ceiling | 0.524 | - | - |
 | false_refusal_rate | 0.047 | - | - |
 | index.num_chunks | 6676.000 | - | - |
 | latency_p50_ms | 684.335 | - | - |
