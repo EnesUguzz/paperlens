@@ -23,6 +23,7 @@ dependencies = [
 
 [project.optional-dependencies]
 ml = ["torch>=2.9", "sentence-transformers>=3.3"]
+pdf = ["docling>=2.30"]
 
 [project.scripts]
 paperlens = "paperlens.cli:app"

@@ -68,6 +68,22 @@ class DataConfig(_Section):
         "https://huggingface.co/api/datasets/allenai/qasper/parquet/qasper/{split}/0.parquet",
         description="What: download URL of a QASPER split; '{split}' is replaced. Effect: none.",
     )
+    pdf_url_template: str = Field(
+        "https://arxiv.org/pdf/{paper_id}",
+        description=(
+            "What: download URL of a paper's PDF; '{paper_id}' is replaced by the arXiv id. "
+            "Effect: none on metrics; only changes where `prepare-pdfs` fetches from."
+        ),
+    )
+    pdf_download_delay_s: float = Field(
+        3.0,
+        ge=0,
+        description=(
+            "What: seconds to wait between two PDF requests. Typical: 3-5. "
+            "Effect: arXiv's automated-access rule asks for at least 3 s; lower values risk "
+            "an IP block, higher values only make `prepare-pdfs` slower (cache hits never wait)."
+        ),
+    )
 
 
 class ChunkingConfig(_Section):

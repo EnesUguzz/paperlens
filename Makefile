@@ -1,6 +1,6 @@
 CONFIG ?= experiments/configs/baseline.yaml
 
-.PHONY: setup test lint format download explain-config check-gpu index eval ablation models summarize notebook
+.PHONY: setup test lint format download prepare-pdfs explain-config check-gpu index eval ablation models summarize notebook
 
 setup:
 	uv sync --extra ml
@@ -20,6 +20,10 @@ lint:
 
 download:
 	uv run paperlens download --split validation
+
+prepare-pdfs:  ## download arXiv PDFs and parse them with Docling (needs --extra pdf)
+	uv sync --extra ml --extra pdf
+	uv run paperlens prepare-pdfs --config $(CONFIG)
 
 explain-config:
 	uv run paperlens explain-config --config $(CONFIG) --out docs/CONFIG.md

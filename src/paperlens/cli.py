@@ -40,6 +40,25 @@ def download(split: str = "validation", config: ConfigOpt = DEFAULT_CONFIG) -> N
     )
 
 
+@app.command("prepare-pdfs")
+def prepare_pdfs_(
+    config: ConfigOpt = DEFAULT_CONFIG,
+    limit: Annotated[int | None, typer.Option("--limit", help="Only the first N papers.")] = None,
+    ids: Annotated[
+        list[str] | None, typer.Option("--id", help="Only these paper ids (repeatable).")
+    ] = None,
+) -> None:
+    """Download arXiv PDFs of the split's papers and parse them with Docling (resumable)."""
+    from paperlens.ingestion.docling_parser import prepare_pdfs
+    from paperlens.ingestion.qasper import download_split, load_split
+
+    cfg = load_config(config)
+    papers, _ = load_split(download_split(cfg.data, cfg.data.split))
+    paper_ids = ids or [p.paper_id for p in papers][:limit]
+    stats = prepare_pdfs(cfg.data, paper_ids)
+    typer.echo(f"{len(paper_ids)} papers: {stats}")
+
+
 @app.command("explain-config")
 def explain_config(
     config: Annotated[Path | None, typer.Option("--config", "-c")] = None,
