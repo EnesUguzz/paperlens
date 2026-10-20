@@ -46,7 +46,7 @@ models:
 	for f in experiments/configs/m1a_models/*.yaml; do uv run paperlens eval --config $$f || exit 1; done
 	uv run paperlens summarize --out evals/results/SUMMARY.md
 
-m1b:  ## every M1b ablation vs baseline, m1b_best, then judge and the summary table (hours of GPU)
+m1b:  ## every M1b ablation vs baseline, m1b_best, then judge and the summary table (hours of GPU; run `make prepare-pdfs` first)
 	uv sync --extra ml --extra pdf
 	for f in experiments/configs/m1b/*.yaml; do uv run paperlens eval --config $$f || exit 1; done
 	uv run paperlens eval --config experiments/configs/m1b_best.yaml

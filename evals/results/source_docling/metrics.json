@@ -46,11 +46,11 @@
   "data.evidence_aligned_rate": 0.9035874439461884,
   "data.evidence_split_rate": 0.03961136023916293,
   "judge.error_rate": 0.0,
-  "judge.llm_calls": 174.0,
-  "judge.accuracy": 0.5,
+  "judge.llm_calls": 189.0,
+  "judge.accuracy": 0.532,
   "judge.accuracy.gold.extractive": 0.5572519083969466,
   "judge.accuracy.gold.abstractive": 0.5517241379310345,
   "judge.accuracy.gold.yes_no": 0.4166666666666667,
-  "judge.accuracy.gold.unanswerable": 0.2702702702702703,
+  "judge.accuracy.gold.unanswerable": 0.4864864864864865,
   "judge.agreement_on_high_f1": 0.8695652173913043
 }

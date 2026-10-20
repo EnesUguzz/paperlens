@@ -41,12 +41,14 @@
   "completion_tokens_mean": 53.708,
   "context_words_mean": 998.848,
   "index.num_chunks": 6676.0,
+  "data.questions_dropped": 0.0,
+  "data.unmatched_evidence_rate": 0.045940170940170943,
   "judge.error_rate": 0.0,
-  "judge.llm_calls": 159.0,
-  "judge.accuracy": 0.512,
+  "judge.llm_calls": 174.0,
+  "judge.accuracy": 0.544,
   "judge.accuracy.gold.extractive": 0.6717557251908397,
   "judge.accuracy.gold.abstractive": 0.3793103448275862,
   "judge.accuracy.gold.yes_no": 0.20833333333333334,
-  "judge.accuracy.gold.unanswerable": 0.35135135135135137,
+  "judge.accuracy.gold.unanswerable": 0.5675675675675675,
   "judge.agreement_on_high_f1": 0.9545454545454546
 }

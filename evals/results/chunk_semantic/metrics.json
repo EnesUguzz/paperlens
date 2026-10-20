@@ -44,11 +44,11 @@
   "data.questions_dropped": 0.0,
   "data.unmatched_evidence_rate": 0.045940170940170943,
   "judge.error_rate": 0.0,
-  "judge.llm_calls": 154.0,
-  "judge.accuracy": 0.524,
+  "judge.llm_calls": 167.0,
+  "judge.accuracy": 0.548,
   "judge.accuracy.gold.extractive": 0.6335877862595419,
   "judge.accuracy.gold.abstractive": 0.4482758620689655,
   "judge.accuracy.gold.yes_no": 0.4166666666666667,
-  "judge.accuracy.gold.unanswerable": 0.32432432432432434,
+  "judge.accuracy.gold.unanswerable": 0.4864864864864865,
   "judge.agreement_on_high_f1": 1.0
 }

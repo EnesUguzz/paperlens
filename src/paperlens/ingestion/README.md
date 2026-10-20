@@ -3,7 +3,7 @@
 | File | Role |
 |---|---|
 | `qasper.py` | download HF parquet, parse papers/questions, map gold evidence -> paragraph ids, sample `dev_small` |
-| `chunkers.py` | cut a paper into chunks (`fixed` or `section`), each remembering its paragraph ids and its paragraph `segments` (what `generation.cite_unit: paragraph` cites) |
+| `chunkers.py` | cut a paper into chunks (`fixed`, `section` or `semantic`), each remembering its paragraph ids and its paragraph `segments` (what `generation.cite_unit: paragraph` cites) |
 | `pdf.py` | download arXiv PDFs (cached, `.part` + rename, User-Agent, 404 -> None, rejects non-PDF bodies); on-disk paths |
 | `docling_parser.py` | Docling PDF -> labelled blocks -> `Paper` (`::d<n>` ids, references dropped); `prepare_pdfs` job (paced, resumable) |
 | `align.py` | fuzzy-align QASPER gold evidence paragraphs to PDF paragraphs (rapidfuzz `partial_ratio`); unmatched evidence becomes a `<paper>::unaligned<n>` sentinel id, never an empty list |

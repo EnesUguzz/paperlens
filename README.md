@@ -101,16 +101,16 @@ combined). Same model, same 250 questions. Δ = paired difference in answer F1 v
 
 | Change | answer F1 | Δ [95% CI] | judge acc. | evidence F1 / ceiling | Recall@5 | p95 |
 |---|---|---|---|---|---|---|
-| baseline | 0.419 | | 0.480 | 0.297 / 0.524 | 0.703 | 1.9 s |
-| **m1b_best** (semantic chunks + paragraph citations) | 0.435 | +0.016 [-0.024, +0.053] | 0.516 | **0.469 / 0.767** | 0.667 | 1.5 s |
-| semantic chunking | 0.427 | +0.009 [-0.030, +0.045] | 0.524 | 0.413 / 0.658 | 0.667 | 1.5 s |
-| cite paragraphs | 0.421 | +0.002 [-0.018, +0.023] | 0.500 | 0.455 / 0.787 | 0.703 | 1.8 s |
-| prompt v2 | 0.421 | +0.003 [-0.019, +0.026] | 0.500 | 0.292 / 0.524 | 0.703 | 1.6 s |
-| multi-query (3) | 0.427 | +0.008 [-0.027, +0.045] | 0.472 | 0.271 / 0.505 | 0.672 | 2.9 s |
-| HyDE | 0.414 | -0.005 [-0.034, +0.025] | 0.460 | 0.273 / 0.529 | 0.713 | 4.1 s |
-| rerank (bge-reranker-v2-m3) | 0.387 | -0.032 [-0.069, +0.005] | 0.472 | 0.285 / 0.526 | 0.731 | 2.9 s |
-| hybrid + rerank | 0.387 | -0.032 [-0.069, +0.005] | 0.472 | 0.285 / 0.526 | 0.731 | 2.9 s |
-| Docling PDF text | 0.404 | -0.015 [-0.057, +0.025] | 0.500 | 0.253 / 0.484 | 0.660 | 3.3 s |
+| baseline | 0.419 | | 0.500 | 0.297 / 0.524 | 0.703 | 1.9 s |
+| **m1b_best** (semantic chunks + paragraph citations) | 0.435 | +0.016 [-0.024, +0.053] | 0.540 | **0.469 / 0.767** | 0.667 | 1.5 s |
+| semantic chunking | 0.427 | +0.009 [-0.030, +0.045] | 0.548 | 0.413 / 0.658 | 0.667 | 1.5 s |
+| cite paragraphs | 0.421 | +0.002 [-0.018, +0.023] | 0.524 | 0.455 / 0.787 | 0.703 | 1.8 s |
+| prompt v2 | 0.421 | +0.003 [-0.019, +0.026] | 0.528 | 0.292 / 0.524 | 0.703 | 1.6 s |
+| multi-query (3) | 0.427 | +0.008 [-0.027, +0.045] | 0.496 | 0.271 / 0.505 | 0.672 | 2.9 s |
+| HyDE | 0.414 | -0.005 [-0.034, +0.025] | 0.484 | 0.273 / 0.529 | 0.713 | 4.1 s |
+| rerank (bge-reranker-v2-m3) | 0.387 | -0.032 [-0.069, +0.005] | 0.496 | 0.285 / 0.526 | 0.731 | 2.9 s |
+| hybrid + rerank | 0.387 | -0.032 [-0.069, +0.005] | 0.496 | 0.285 / 0.526 | 0.731 | 2.9 s |
+| Docling PDF text | 0.404 | -0.015 [-0.057, +0.025] | 0.532 | 0.253 / 0.484 | 0.660 | 3.3 s |
 
 Full table with every config field: [`evals/results/SUMMARY.md`](evals/results/SUMMARY.md).
 
@@ -124,10 +124,11 @@ Full table with every config field: [`evals/results/SUMMARY.md`](evals/results/S
 - **The combination is sub-additive.** `m1b_best` reaches 0.469 / 0.767, above either part
   alone but below the sum of the single gains, and its ceiling (0.767) is lower than
   cite_paragraph alone (0.787).
-- **Reranking did not help here.** `rerank` and `hybrid_rerank` are identical: per-paper
-  retrieval offers 30 candidates and a paper has few more chunks, so the reranker only
-  reorders almost the whole paper, at +1 s p95. Retry in M2's corpus mode, where the
-  candidate pool is a real subset. Multi-query and HyDE added 1.5-2x latency for no gain.
+- **Reranking did not help here.** `rerank` and `hybrid_rerank` are near-identical (6/250
+  top-5 lists and 2/250 answers differ): per-paper retrieval offers 30 candidates, which is
+  the whole paper for 234 of 281 papers, so the reranker mostly reorders the whole paper,
+  at +1 s p95. Retry in M2's corpus mode, where the candidate pool is a real subset.
+  Multi-query and HyDE added 1.6x and 2.2x p95 latency for no gain.
 - **Docling PDF text is worse on Answer-F1, Evidence-F1, Recall@5 and latency.** 90.4% of gold evidence aligns to PDF
   paragraphs (`data.evidence_aligned_rate` 0.904), one paper could not be downloaded from
   arXiv (`data.papers_missing` 1), and p95 latency is 3.3 s.
