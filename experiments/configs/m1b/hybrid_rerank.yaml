@@ -1,0 +1,14 @@
+# Hybrid (dense + bm25, RRF) pool, then the cross-encoder reranker.
+# Deliberately TWO changes vs baseline (retrieval.method AND rerank.enabled): M1a already
+# measured hybrid alone, so the question here is "does a hybrid pool give the reranker better
+# candidates than a dense pool?" -> compare against m1b/rerank, not only against baseline.
+extends: ../baseline.yaml
+retrieval:
+  method: hybrid
+  candidate_k: 30          # each retriever returns 30; RRF fuses them into a pool of 30
+rerank:
+  enabled: true
+eval:
+  experiment_name: m1b
+  run_name: hybrid_rerank
+  reference_run: baseline

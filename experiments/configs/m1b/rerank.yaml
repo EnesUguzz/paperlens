@@ -1,0 +1,11 @@
+# Cross-encoder rerank over a dense pool: retrieve candidate_k=30, rerank, keep top_k=5.
+# ONE change vs baseline: rerank.enabled (the index is unchanged, so no re-indexing).
+extends: ../baseline.yaml
+rerank:
+  enabled: true            # BAAI/bge-reranker-v2-m3 on cuda
+retrieval:
+  candidate_k: 30          # pool size handed to the reranker (also the default)
+eval:
+  experiment_name: m1b
+  run_name: rerank
+  reference_run: baseline

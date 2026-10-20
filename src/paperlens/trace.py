@@ -4,9 +4,10 @@ Purpose: A learning and debugging view of the pipeline. Reports show averages ov
 questions; a trace shows the concrete chunks, scores, prompt and answer for one question,
 so you can see *why* a metric moved.
 Flow: AppConfig + Question -> trace_question() -> Trace (paper stats, query vector,
-dense / bm25 / hybrid rankings, the exact prompt, LLM answer, scores) -> render_trace().
+dense / bm25 / hybrid rankings, the reranker's before/after when enabled, the exact prompt, LLM answer, scores) -> render_trace().
 Params: retrieval.* (all three methods are shown; retrieval.method is the one that feeds
-the prompt), chunking.* and embedding.* (through the index), llm.* (unless --no-llm).
+the prompt), rerank.* (when enabled, the pool and the reranked top_k are added and the
+reranked chunks feed the prompt), chunking.* and embedding.* (through the index), llm.* (unless --no-llm).
 Try: `uv run paperlens trace --index 3 --no-llm` and compare which chunks dense and bm25
 rank first; then rerun with a config where chunking.chunk_size is 100.
 """
@@ -26,6 +27,7 @@ from paperlens.index.store import IndexBundle, build_or_load
 from paperlens.ingestion.qasper import download_split, load_split, sample_questions
 from paperlens.llm.client import LLMClient, LLMResponse, Message, OpenAICompatClient
 from paperlens.pipelines.factory import build_pipeline
+from paperlens.retrieval.reranker import build_reranker
 from paperlens.retrieval.retriever import Retriever
 
 METHODS: tuple[str, ...] = get_args(RetrievalConfig.model_fields["method"].annotation)
@@ -52,6 +54,8 @@ class Trace(BaseModel):
     query_vector_dim: int
     query_vector_head: list[float]
     rankings: dict[str, list[ScoredChunk]]
+    first_stage_pool: list[ScoredChunk] | None = None  # set only when the reranker is on
+    reranked: list[ScoredChunk] | None = None
     prompt: str
     result: PipelineResult | None
     record: EvalRecord | None
@@ -71,8 +75,21 @@ def trace_question(
         ).retrieve(question.question, paper_id=question.paper_id)
         for method in METHODS
     }
-    pipeline = build_pipeline(cfg, bundle, llm or _NoLLM(), {paper.paper_id: paper.title})
-    prompt = pipeline.build_prompt(question, rankings[cfg.retrieval.method])
+    reranker = build_reranker(cfg.rerank)  # built once so the pipeline reuses the same model
+    pool: list[ScoredChunk] | None = None
+    reranked: list[ScoredChunk] | None = None
+    if reranker is not None:
+        pool_cfg = cfg.retrieval.model_copy(update={"top_k": cfg.retrieval.candidate_k})
+        pool = Retriever(pool_cfg, bundle.dense, bundle.sparse).retrieve(
+            question.question, paper_id=question.paper_id
+        )
+        reranked = reranker.rerank(question.question, pool, cfg.retrieval.top_k)
+    pipeline = build_pipeline(
+        cfg, bundle, llm or _NoLLM(), {paper.paper_id: paper.title}, reranker=reranker
+    )
+    prompt = pipeline.build_prompt(
+        question, reranked if reranked is not None else rankings[cfg.retrieval.method]
+    )
     result: PipelineResult | None = None
     record: EvalRecord | None = None
     if llm is not None:
@@ -90,6 +107,8 @@ def trace_question(
         query_vector_dim=int(vector.shape[0]),
         query_vector_head=[round(float(x), 4) for x in vector[:VECTOR_HEAD]],
         rankings=rankings,
+        first_stage_pool=pool,
+        reranked=reranked,
         prompt=prompt,
         result=result,
         record=record,
@@ -171,6 +190,13 @@ def render_trace(trace: Trace) -> str:
         used = "  <- feeds the prompt" if method == trace.method else ""
         out.append(f"\n  -- {method}{used}")
         out.extend(_ranking_lines(ranking, gold))
+    if trace.first_stage_pool is not None and trace.reranked is not None:
+        out.append(
+            f"\n  -- first stage pool ({len(trace.first_stage_pool)} chunks, '{trace.method}')"
+        )
+        out.extend(_ranking_lines(trace.first_stage_pool, gold))
+        out.append("\n  -- after rerank  <- feeds the prompt")
+        out.extend(_ranking_lines(trace.reranked, gold))
 
     out.append(_heading(5, "PROMPT (exactly what the LLM receives)"))
     out.append(trace.prompt)

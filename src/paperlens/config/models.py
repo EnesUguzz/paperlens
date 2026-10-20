@@ -193,8 +193,10 @@ class RetrievalConfig(_Section):
         30,
         ge=1,
         description=(
-            "What: chunks each retriever returns before fusion ('hybrid' only). "
-            "Typical: 20-100. Effect: higher lets RRF rescue items one retriever ranked low."
+            "What: chunks each retriever returns before fusion ('hybrid'), and the pool size "
+            "handed to the reranker when rerank.enabled. Typical: 20-100. Effect: higher lets "
+            "RRF or the reranker rescue items the first stage ranked low; the reranker's cost "
+            "grows linearly with it."
         ),
     )
     rrf_k: int = Field(
@@ -230,6 +232,50 @@ class RetrievalConfig(_Section):
         if self.candidate_k < self.top_k:
             raise ValueError("candidate_k must be >= top_k")
         return self
+
+
+class RerankConfig(_Section):
+    enabled: bool = Field(
+        False,
+        description=(
+            "What: rescore the first-stage pool (retrieval.candidate_k chunks) with a "
+            "cross-encoder and keep the best retrieval.top_k. Effect: usually raises "
+            "Recall@k/evidence F1 over plain retrieval; costs GPU time per question. "
+            "Does not change the index."
+        ),
+    )
+    model_name: str = Field(
+        "BAAI/bge-reranker-v2-m3",
+        description=(
+            "What: sentence-transformers CrossEncoder model; 'lexical' = fake that scores "
+            "shared words, for tests/CI. Effect: stronger models rank better; bigger ones "
+            "cost VRAM and latency."
+        ),
+    )
+    batch_size: int = Field(
+        16,
+        ge=1,
+        description=(
+            "What: (query, chunk) pairs scored per GPU batch. Typical: 8-64. "
+            "Effect: higher = faster until VRAM runs out; no effect on metrics."
+        ),
+    )
+    max_length: int = Field(
+        512,
+        ge=32,
+        description=(
+            "What: max tokens of a (query, chunk) pair; the rest is truncated. "
+            "Typical: 512-1024. Effect: should cover chunk_size * 1.5 tokens plus the query "
+            "or chunk endings are ignored; higher costs memory."
+        ),
+    )
+    device: str = Field(
+        "cuda",
+        description=(
+            "What: torch device ('cuda' or 'cpu'). Effect: 'cpu' works without a GPU but "
+            "is far slower; no effect on metrics."
+        ),
+    )
 
 
 class LLMConfig(_Section):
@@ -398,6 +444,7 @@ class AppConfig(BaseSettings):
     chunking: ChunkingConfig = Field(default_factory=ChunkingConfig)
     embedding: EmbeddingConfig = Field(default_factory=EmbeddingConfig)
     retrieval: RetrievalConfig = Field(default_factory=RetrievalConfig)
+    rerank: RerankConfig = Field(default_factory=RerankConfig)
     llm: LLMConfig = Field(default_factory=LLMConfig)
     generation: GenerationConfig = Field(default_factory=GenerationConfig)
     eval: EvalConfig = Field(default_factory=EvalConfig)

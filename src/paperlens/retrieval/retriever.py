@@ -5,7 +5,8 @@ is a one-line YAML change.
 Flow: question (+ paper_id in single-paper mode, + optional QueryPlan) -> search per plan
 text -> RRF when there are several rankings -> optional reranker -> top_k ScoredChunk
 -> pipelines/baseline.py.
-Params: retrieval.method, retrieval.top_k, retrieval.candidate_k, retrieval.rrf_k.
+Params: retrieval.method, retrieval.top_k, retrieval.candidate_k, retrieval.rrf_k (the
+reranker, if any, is passed in and built from rerank.*).
 Try: Run dense, bm25 and hybrid on the same sample and open the per-type breakdown in the
 report: bm25 usually wins on extractive questions about named datasets and metrics.
 """
@@ -54,7 +55,7 @@ class Retriever:
             return index.search(text, cfg.top_k, paper_id)
 
         rankings = [index.search(text, cfg.candidate_k, paper_id) for index, text in searches]
-        pool_size = cfg.candidate_k if self._reranker else cfg.top_k
+        pool_size = cfg.candidate_k if self._reranker is not None else cfg.top_k
         if len(rankings) == 1:
             pool = rankings[0][:pool_size]  # keep the index's own scores
         else:
