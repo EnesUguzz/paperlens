@@ -1,6 +1,6 @@
 from pathlib import Path
 
-from paperlens.config.models import AppConfig
+from paperlens.config.models import AppConfig, QueryConfig
 from paperlens.domain import Paper, Question
 from paperlens.index.embedder import HashingEmbedder
 from paperlens.index.store import build_or_load
@@ -83,3 +83,50 @@ def test_run_trace_selects_by_id_or_sample_index(
         run_trace(cfg, question_id="nope", use_llm=False, dataset=data, embedder=HashingEmbedder())
     with pytest.raises(ValueError, match="index"):
         run_trace(cfg, index=99, use_llm=False, dataset=data, embedder=HashingEmbedder())
+
+
+def hyde_cfg(tmp_path: Path) -> AppConfig:
+    cfg = make_cfg(tmp_path)
+    return cfg.model_copy(
+        update={"query": QueryConfig(transform="hyde", hyde_prompt=REPO / "prompts" / "hyde.md")}
+    )
+
+
+def test_trace_shows_query_plan(
+    tmp_path: Path, sample_paper: Paper, sample_questions: list[Question]
+) -> None:
+    cfg = hyde_cfg(tmp_path)
+    embedder = HashingEmbedder()
+    bundle = build_or_load(cfg, [sample_paper], embedder)
+    question = sample_questions[0]
+    llm = FakeLLM(
+        [
+            "HYPOTHETICAL PARAGRAPH about SQuAD.",  # the single plan call, reused by the run
+            '{"answer_type": "extractive", "answer": "SQuAD", "evidence": [1]}',
+        ]
+    )
+    try:
+        trace = trace_question(cfg, question, sample_paper, bundle, embedder, llm)
+    finally:
+        bundle.dense.close()
+    text = render_trace(trace)
+    assert text.index("QUERY PLAN") < text.index("QUERY EMBEDDING")
+    assert "HYPOTHETICAL PARAGRAPH about SQuAD." in text and question.question in text
+    assert len(llm.calls) == 2  # planned once, not twice
+    assert trace.result is not None
+    assert trace.result.answer.usage.prompt_tokens == 2 * FakeLLM.PROMPT_TOKENS
+
+
+def test_trace_without_llm_shows_identity_plan_and_error(
+    tmp_path: Path, sample_paper: Paper, sample_questions: list[Question]
+) -> None:
+    cfg = hyde_cfg(tmp_path)
+    embedder = HashingEmbedder()
+    bundle = build_or_load(cfg, [sample_paper], embedder)
+    try:
+        trace = trace_question(cfg, sample_questions[0], sample_paper, bundle, embedder, None)
+    finally:
+        bundle.dense.close()
+    text = render_trace(trace)
+    assert "QUERY PLAN" in text and "LLM disabled" in text
+    assert sample_questions[0].question in text

@@ -30,7 +30,13 @@ _THINK = re.compile(r"<think>.*?</think>", re.DOTALL)
 
 
 class StructuredOutputError(ValueError):
-    """The model did not produce schema-valid JSON, even after a repair round."""
+    """The model did not produce schema-valid JSON, even after a repair round.
+
+    `usage` is what the failed attempts already cost, so callers can still account for it."""
+
+    def __init__(self, message: str, usage: Usage | None = None) -> None:
+        super().__init__(message)
+        self.usage = usage or Usage()
 
 
 def strip_reasoning(text: str) -> str:
@@ -64,4 +70,4 @@ def structured_call[T: BaseModel](
                 {"role": "assistant", "content": reply.content},
                 {"role": "user", "content": REPAIR_PROMPT.format(error=last_error)},
             ]
-    raise StructuredOutputError(last_error)
+    raise StructuredOutputError(last_error, total)

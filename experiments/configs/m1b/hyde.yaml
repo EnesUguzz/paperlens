@@ -1,0 +1,12 @@
+# HyDE: the LLM writes a hypothetical answer paragraph; dense search uses it (plus the
+# question), BM25 keeps the plain question.
+# ONE change vs baseline: query.transform (the index is unchanged, so no re-indexing).
+# Costs one extra LLM call per question; its latency and tokens are included in the run.
+extends: ../baseline.yaml
+query:
+  transform: hyde
+  include_original: true
+eval:
+  experiment_name: m1b
+  run_name: hyde
+  reference_run: baseline

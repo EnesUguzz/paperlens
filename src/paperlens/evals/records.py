@@ -88,6 +88,7 @@ class EvalRecord(BaseModel):
     answer_words: int = 0
     gold_recall: float = 0.0
     doc_hit_rate: float | None = None
+    query_error: str | None = None  # query transform failed; the question itself was searched
     top_context_preview: str
     context_words: int
     prompt_tokens: int
@@ -128,6 +129,7 @@ def build_record(question: Question, result: PipelineResult, k_values: Sequence[
             if result.retrieved
             else None
         ),
+        query_error=result.query_error,
         top_context_preview=preview,
         context_words=sum(len(sc.chunk.text.split()) for sc in result.retrieved),
         prompt_tokens=answer.usage.prompt_tokens,

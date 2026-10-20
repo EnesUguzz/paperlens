@@ -1,0 +1,12 @@
+# LLM multi-query: 3 paraphrases + the original, results fused with RRF.
+# ONE change vs baseline: query.transform (the index is unchanged, so no re-indexing).
+# Costs one extra LLM call per question; its latency and tokens are included in the run.
+extends: ../baseline.yaml
+query:
+  transform: multi_query
+  n_queries: 3
+  include_original: true
+eval:
+  experiment_name: m1b
+  run_name: multi_query
+  reference_run: baseline

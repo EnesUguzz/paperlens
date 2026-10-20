@@ -3,11 +3,12 @@
 Purpose: A learning and debugging view of the pipeline. Reports show averages over 250
 questions; a trace shows the concrete chunks, scores, prompt and answer for one question,
 so you can see *why* a metric moved.
-Flow: AppConfig + Question -> trace_question() -> Trace (paper stats, query vector,
+Flow: AppConfig + Question -> trace_question() -> Trace (paper stats, query plan, query vector,
 dense / bm25 / hybrid rankings, the reranker's before/after when enabled, the exact prompt, LLM answer, scores) -> render_trace().
 Params: retrieval.* (all three methods are shown; retrieval.method is the one that feeds
 the prompt), rerank.* (when enabled, the pool and the reranked top_k are added and the
-reranked chunks feed the prompt), chunking.* and embedding.* (through the index), llm.* (unless --no-llm).
+reranked chunks feed the prompt), query.* (the QUERY PLAN section; with --no-llm an LLM
+transform falls back to the question and shows the error), chunking.* and embedding.* (through the index), llm.* (unless --no-llm).
 Try: `uv run paperlens trace --index 3 --no-llm` and compare which chunks dense and bm25
 rank first; then rerun with a config where chunking.chunk_size is 100.
 """
@@ -25,8 +26,9 @@ from paperlens.evals.records import EvalRecord, build_record
 from paperlens.index.embedder import Embedder, build_embedder
 from paperlens.index.store import IndexBundle, build_or_load
 from paperlens.ingestion.qasper import download_split, load_split, sample_questions
-from paperlens.llm.client import LLMClient, LLMResponse, Message, OpenAICompatClient
+from paperlens.llm.client import LLMClient, LLMError, LLMResponse, Message, OpenAICompatClient
 from paperlens.pipelines.factory import build_pipeline
+from paperlens.retrieval.query import QueryPlan
 from paperlens.retrieval.reranker import build_reranker
 from paperlens.retrieval.retriever import Retriever
 
@@ -41,7 +43,7 @@ class _NoLLM:
     def complete(
         self, messages: Sequence[Message], response_format: dict[str, Any] | None = None
     ) -> LLMResponse:
-        raise RuntimeError("LLM disabled for this trace")
+        raise LLMError("LLM disabled for this trace")
 
 
 class Trace(BaseModel):
@@ -50,6 +52,7 @@ class Trace(BaseModel):
     n_paragraphs: int
     n_chunks_in_paper: int
     gold_evidence_ids: list[str]
+    plan: QueryPlan
     method: str
     query_vector_dim: int
     query_vector_head: list[float]
@@ -69,31 +72,32 @@ def trace_question(
     embedder: Embedder,
     llm: LLMClient | None,
 ) -> Trace:
+    reranker = build_reranker(cfg.rerank)  # built once so the pipeline reuses the same model
+    pipeline = build_pipeline(
+        cfg, bundle, llm or _NoLLM(), {paper.paper_id: paper.title}, reranker=reranker
+    )
+    plan = pipeline.plan(question)  # one transform call, shared by every ranking and the run
     rankings = {
         method: Retriever(
             cfg.retrieval.model_copy(update={"method": method}), bundle.dense, bundle.sparse
-        ).retrieve(question.question, paper_id=question.paper_id)
+        ).retrieve(question.question, paper_id=question.paper_id, plan=plan)
         for method in METHODS
     }
-    reranker = build_reranker(cfg.rerank)  # built once so the pipeline reuses the same model
     pool: list[ScoredChunk] | None = None
     reranked: list[ScoredChunk] | None = None
     if reranker is not None:
         pool_cfg = cfg.retrieval.model_copy(update={"top_k": cfg.retrieval.candidate_k})
         pool = Retriever(pool_cfg, bundle.dense, bundle.sparse).retrieve(
-            question.question, paper_id=question.paper_id
+            question.question, paper_id=question.paper_id, plan=plan
         )
         reranked = reranker.rerank(question.question, pool, cfg.retrieval.top_k)
-    pipeline = build_pipeline(
-        cfg, bundle, llm or _NoLLM(), {paper.paper_id: paper.title}, reranker=reranker
-    )
     prompt = pipeline.build_prompt(
         question, reranked if reranked is not None else rankings[cfg.retrieval.method]
     )
     result: PipelineResult | None = None
     record: EvalRecord | None = None
     if llm is not None:
-        result = pipeline.run(question)
+        result = pipeline.run(question, plan)
         k_values = [k for k in cfg.eval.k_values if k <= cfg.retrieval.top_k]
         record = build_record(question, result, k_values)
     vector = embedder.embed_query(question.question)
@@ -103,6 +107,7 @@ def trace_question(
         n_paragraphs=len(paper.paragraphs),
         n_chunks_in_paper=sum(1 for c in bundle.chunks if c.paper_id == paper.paper_id),
         gold_evidence_ids=sorted({p for r in question.references for p in r.evidence_ids}),
+        plan=plan,
         method=cfg.retrieval.method,
         query_vector_dim=int(vector.shape[0]),
         query_vector_head=[round(float(x), 4) for x in vector[:VECTOR_HEAD]],
@@ -179,13 +184,27 @@ def render_trace(trace: Trace) -> str:
     out.append(_heading(2, "CHUNKS (offline: chunking + indexing, cached)"))
     out.append(f"  this paper: {trace.n_paragraphs} paragraphs -> {trace.n_chunks_in_paper} chunks")
 
-    out.append(_heading(3, "QUERY EMBEDDING"))
+    out.append(_heading(3, "QUERY PLAN (what each retriever searches with)"))
+    plan = trace.plan
+    out.append("  dense:")
+    out.extend(f"    - {' '.join(text.split())}" for text in plan.dense)
+    out.append("  sparse (bm25):")
+    out.extend(f"    - {' '.join(text.split())}" for text in plan.sparse)
+    if plan.error:
+        out.append(f"  error: {plan.error} (fell back to the question itself)")
+    if plan.usage.latency_ms or plan.usage.prompt_tokens:
+        out.append(
+            f"  transform cost: {plan.usage.prompt_tokens} in / "
+            f"{plan.usage.completion_tokens} out, {plan.usage.latency_ms:.0f} ms"
+        )
+
+    out.append(_heading(4, "QUERY EMBEDDING (of the question itself)"))
     head = ", ".join(f"{x:+.4f}" for x in trace.query_vector_head)
     out.append(
         f"  {trace.query_vector_dim} numbers, first {len(trace.query_vector_head)}: [{head}, ...]"
     )
 
-    out.append(_heading(4, f"RETRIEVAL (config uses '{trace.method}'; all methods shown)"))
+    out.append(_heading(5, f"RETRIEVAL (config uses '{trace.method}'; all methods shown)"))
     for method, ranking in trace.rankings.items():
         used = "  <- feeds the prompt" if method == trace.method else ""
         out.append(f"\n  -- {method}{used}")
@@ -198,10 +217,10 @@ def render_trace(trace: Trace) -> str:
         out.append("\n  -- after rerank  <- feeds the prompt")
         out.extend(_ranking_lines(trace.reranked, gold))
 
-    out.append(_heading(5, "PROMPT (exactly what the LLM receives)"))
+    out.append(_heading(6, "PROMPT (exactly what the LLM receives)"))
     out.append(trace.prompt)
 
-    out.append(_heading(6, "LLM ANSWER"))
+    out.append(_heading(7, "LLM ANSWER"))
     if trace.result is None:
         out.append("  skipped (--no-llm)")
     else:
@@ -216,7 +235,7 @@ def render_trace(trace: Trace) -> str:
             f"{a.usage.latency_ms:.0f} ms"
         )
 
-    out.append(_heading(7, "SCORE"))
+    out.append(_heading(8, "SCORE"))
     if trace.record is None:
         out.append("  skipped (--no-llm)")
     else:

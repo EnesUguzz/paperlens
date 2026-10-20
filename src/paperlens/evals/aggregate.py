@@ -71,6 +71,7 @@ def aggregate(records: Sequence[EvalRecord], k_values: Sequence[int]) -> dict[st
     if answerable:
         metrics["false_refusal_rate"] = _rate(answerable, lambda r: r.refused)
     metrics["error_rate"] = _rate(records, lambda r: r.error is not None)
+    metrics["query_error_rate"] = _rate(records, lambda r: r.query_error is not None)
 
     latencies = [r.latency_ms for r in records]
     metrics["latency_p50_ms"] = float(np.percentile(latencies, P50))

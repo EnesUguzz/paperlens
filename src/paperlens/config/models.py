@@ -278,6 +278,53 @@ class RerankConfig(_Section):
     )
 
 
+class QueryConfig(_Section):
+    transform: Literal["none", "multi_query", "hyde"] = Field(
+        "none",
+        description=(
+            "What: how the question is rewritten before retrieval. 'none' searches with the "
+            "question itself; 'multi_query' asks the LLM for n_queries paraphrases and fuses "
+            "their results (RRF); 'hyde' asks the LLM for a hypothetical answer paragraph "
+            "that the dense search uses (BM25 keeps the plain question). Effect: can raise "
+            "recall on vocabulary mismatch; costs one extra LLM call per question (latency "
+            "and tokens are counted in the run); on failure the question itself is used and "
+            "query_error_rate rises."
+        ),
+    )
+    n_queries: int = Field(
+        3,
+        ge=1,
+        description=(
+            "What: paraphrases kept for multi_query (extra ones are dropped). Typical: 2-5. "
+            "Effect: more phrasings widen recall but add retrieval work and can dilute the "
+            "fused ranking; the LLM call count does not change."
+        ),
+    )
+    include_original: bool = Field(
+        True,
+        description=(
+            "What: keep the original question among the search texts (multi_query: in both "
+            "channels; hyde: in the dense channel next to the hypothetical paragraph). "
+            "Effect: True is the safe choice, False tests whether the rewrite alone is enough."
+        ),
+    )
+    multi_query_prompt: Path = Field(
+        Path("prompts/multi_query.md"),
+        description=(
+            "What: prompt file with {{question}}, {{title}} and {{n}} placeholders. "
+            "Effect: wording decides how varied and paper-specific the paraphrases are."
+        ),
+    )
+    hyde_prompt: Path = Field(
+        Path("prompts/hyde.md"),
+        description=(
+            "What: prompt file with {{question}} and {{title}} placeholders. Effect: wording "
+            "decides how paper-like the hypothetical paragraph is (and so how close it lands "
+            "to the real passages in embedding space)."
+        ),
+    )
+
+
 class LLMConfig(_Section):
     base_url: str = Field(
         "http://localhost:11434/v1",
@@ -445,6 +492,7 @@ class AppConfig(BaseSettings):
     embedding: EmbeddingConfig = Field(default_factory=EmbeddingConfig)
     retrieval: RetrievalConfig = Field(default_factory=RetrievalConfig)
     rerank: RerankConfig = Field(default_factory=RerankConfig)
+    query: QueryConfig = Field(default_factory=QueryConfig)
     llm: LLMConfig = Field(default_factory=LLMConfig)
     generation: GenerationConfig = Field(default_factory=GenerationConfig)
     eval: EvalConfig = Field(default_factory=EvalConfig)
