@@ -39,23 +39,29 @@ def vote(chunks: Sequence[ScoredChunk]) -> list[tuple[str, float]]:
     return [(pid, n / len(chunks)) for pid, n in ranked]
 
 
-def _score(text: str, title: str) -> float:
-    full = fuzz.partial_ratio(title.casefold(), text.casefold())
+def _score(text: str, title: str, min_score: float) -> tuple[int, float]:
+    """(rank, fuzzy score): 2 = full title found, 1 = short name found, 0 = neither.
+
+    A full title outranks a short name, so 'Neural Attention for QA' named in full is not
+    tied with another paper whose short name is 'Attention'."""
+    full = float(fuzz.partial_ratio(title.casefold(), text.casefold()))
+    if full >= min_score:
+        return 2, full
     short = short_title(title)
     # Short names count only as a case-sensitive whole word: "In BERT, ..." names the
     # paper, "how does attention help?" does not name "Attention: a survey".
     if len(short) >= MIN_SHORT_TITLE_CHARS and re.search(rf"\b{re.escape(short)}\b", text):
-        return EXACT
-    return float(full)
+        return 1, EXACT
+    return 0, full
 
 
 def _best(text: str, titles: Mapping[str, str], ids: Sequence[str], min_score: float) -> str | None:
-    scored = [(_score(text, titles[pid]), pid) for pid in ids if titles.get(pid)]
+    scored = [(_score(text, titles[pid], min_score), pid) for pid in ids if titles.get(pid)]
     if not scored:
         return None
     top = max(s for s, _ in scored)
     winners = [pid for s, pid in scored if s == top]
-    return winners[0] if top >= min_score and len(winners) == 1 else None
+    return winners[0] if top[0] > 0 and len(winners) == 1 else None
 
 
 def match_title(

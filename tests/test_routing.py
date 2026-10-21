@@ -55,3 +55,11 @@ def test_decide_rules() -> None:
     assert decide("Which dataset?", None, split, TITLES, cfg) == ("clarify", None)
     assert decide("Which dataset?", None, [], TITLES, cfg) == ("clarify", None)
     assert decide("In Attention, which dataset?", "A", clear, TITLES, cfg) == ("named", "C")
+
+
+def test_full_title_beats_other_short_title() -> None:
+    # 'Attention' (short title of C) appears inside B's title-cased full title
+    titles = {"B": "Neural Attention for Question Answering", "C": "Attention: a survey"}
+    asked = 'In the paper "Neural Attention for Question Answering", what is the baseline?'
+    assert match_title(asked, titles, 90) == "B"
+    assert match_title(titles["B"], titles, 90, candidates=["B", "C"]) == "B"
