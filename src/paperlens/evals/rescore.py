@@ -83,9 +83,17 @@ def _answer_from_record(raw: dict[str, Any], chunks: Mapping[str, Chunk]) -> Ans
     )
 
 
+def is_conversation_run(run_dir: Path) -> bool:
+    """M2 corpus_rag/agent runs: their turn fields cannot be rebuilt from the index alone."""
+    params = json.loads((run_dir / PARAMS_FILE).read_text(encoding="utf-8"))
+    return bool(params.get("eval.system", "single_paper") != "single_paper")
+
+
 def rescore_run(
     run_dir: Path, *, dataset: tuple[list[Paper], list[Question]] | None = None
 ) -> RunResult:
+    if is_conversation_run(run_dir):
+        raise ValueError(f"{run_dir.name} is a conversation run (M2); re-run it instead")
     params: dict[str, Any] = json.loads((run_dir / PARAMS_FILE).read_text(encoding="utf-8"))
     cfg = AppConfig(**unflatten({k: v for k, v in params.items() if not k.startswith(META_PREFIX)}))
     loaded = resolve_dataset(cfg.data, dataset)

@@ -118,7 +118,7 @@ def rescore(
     run: Annotated[str | None, typer.Option("--run", help="One run; default: all")] = None,
 ) -> None:
     """Recompute records, metrics and reports of saved runs without calling the LLM."""
-    from paperlens.evals.rescore import MissingIndexError, rescore_run
+    from paperlens.evals.rescore import MissingIndexError, is_conversation_run, rescore_run
 
     dirs = [results_dir / run] if run else sorted(d for d in results_dir.iterdir() if d.is_dir())
     # references first, so every rescored report compares against rescored numbers
@@ -126,6 +126,9 @@ def rescore(
     skipped: list[str] = []
     for d in dirs:
         if (d / "records.jsonl").exists():
+            if is_conversation_run(d):  # M2 turns are not rebuildable from the index
+                typer.echo(f"{d.name}: conversation run, not rescored (re-run it instead)")
+                continue
             try:
                 result = rescore_run(d)
             except MissingIndexError as err:  # one missing index must not stop the other runs

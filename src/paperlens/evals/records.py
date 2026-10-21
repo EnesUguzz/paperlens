@@ -90,6 +90,17 @@ class EvalRecord(BaseModel):
     gold_recall: float = 0.0
     doc_hit_rate: float | None = None
     query_error: str | None = None  # query transform failed; the question itself was searched
+    # M2 conversation turns (None / False for single-paper runs)
+    conversation_id: str | None = None
+    turn_index: int | None = None
+    turn_type: str | None = None  # first | same | switch_signaled | switch_unsignaled
+    signal_template: int | None = None
+    shown_question: str | None = None  # what the user typed (question maybe inside a template)
+    standalone_question: str | None = None  # agent condense output
+    decision: str | None = None  # named | vote | stay | clarify
+    resolved_paper_id: str | None = None  # paper the answer was drawn from
+    clarified: bool = False
+    llm_calls: int | None = None
     top_context_preview: str
     context_words: int
     prompt_tokens: int
