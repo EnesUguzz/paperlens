@@ -1,0 +1,9 @@
+# min_lead sweep: same as m2_agent.yaml (0.3) except agent.route.min_lead.
+# Lower = the corpus vote switches papers more easily (more caught silent switches,
+# more `same` turns pulled to another paper, fewer "which paper?" questions).
+extends: ../m2_agent.yaml
+agent:
+  route:
+    min_lead: 0.2
+eval:
+  run_name: m2_agent_lead02

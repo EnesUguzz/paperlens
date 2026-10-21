@@ -1,0 +1,9 @@
+# min_lead sweep: same as m2_agent.yaml (0.3) except agent.route.min_lead.
+# Higher = the agent switches only on a very clear vote (fewer wrong-paper switches,
+# fewer caught silent switches, more "which paper?" questions on first turns).
+extends: ../m2_agent.yaml
+agent:
+  route:
+    min_lead: 0.5
+eval:
+  run_name: m2_agent_lead05

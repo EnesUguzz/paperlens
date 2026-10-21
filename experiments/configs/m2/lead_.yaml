@@ -1,0 +1,7 @@
+# min_lead sweep: same as m2_agent.yaml (0.3) except agent.route.min_lead.
+extends: ../m2_agent.yaml
+agent:
+  route:
+    min_lead: 
+eval:
+  run_name: m2_agent_lead
