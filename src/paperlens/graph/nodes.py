@@ -5,7 +5,7 @@ so a trace shows one decision per span. Retrieval and answering reuse the M1 cod
 (Retriever, BaselinePipeline.generate); routing is graph/routing.py.
 Flow: condense -> resolve_paper -> (clarify: interrupt, the user names the paper) ->
 retrieve -> generate | refuse. Wired in graph/build.py.
-Params: agent.condense.*, agent.route.*, agent.clarify.max_candidates, retrieval.*,
+Params: agent.condense.* (triggers gate the condense LLM call), agent.route.*, agent.clarify.max_candidates, retrieval.*,
 generation.*.
 Try: Turn agent.condense.enabled off and run the follow-up demo (`paperlens converse`):
 'and how big is it?' is then searched as typed and usually gets refused.
@@ -13,6 +13,7 @@ Try: Turn agent.condense.enabled off and run the follow-up demo (`paperlens conv
 
 from __future__ import annotations
 
+import re
 from collections.abc import Mapping
 from dataclasses import dataclass
 from typing import Any, Protocol
@@ -30,6 +31,7 @@ from paperlens.pipelines.baseline import BaselinePipeline, RetrieverLike
 
 CLARIFY_PROMPT = "Which paper do you mean?"
 NO_HISTORY = "(no earlier messages)"
+TITLE_ADDED = "rejected: added a paper title"
 
 
 class CorpusSearch(Protocol):
@@ -75,7 +77,10 @@ class Nodes:
             "llm_calls": 0,
         }
         cfg = self.d.cfg.condense
-        if not cfg.enabled or not history:
+        # only follow-ups go to the LLM: asked to leave standalone questions alone, a 14B
+        # model still rewrites most of them (measured: 30/40), so the gate is deterministic
+        follow_up = any(re.search(p, text, re.IGNORECASE) for p in cfg.triggers)
+        if not cfg.enabled or not history or not follow_up:
             return fresh
         prompt = self.d.condense_template.replace(
             "{{history}}", _history_text(history, cfg.history_turns)
@@ -92,12 +97,21 @@ class Nodes:
                 "llm_calls": 1,
             }
         standalone = out.question.strip() or text
-        return fresh | {"standalone": standalone, "usage": usage, "llm_calls": 1}
+        spent: dict[str, Any] = {"usage": usage, "llm_calls": 1}
+        # The model likes to append the previous paper's title ("... in the paper 'X'?"),
+        # which turns every later question into one about X; the prompt forbids it, this
+        # enforces it.
+        min_score = self.d.cfg.route.title_match_min
+        added = match_title(standalone, self.d.titles, min_score)
+        if added is not None and match_title(text, self.d.titles, min_score) != added:
+            return fresh | spent | {"condense_error": TITLE_ADDED}
+        return fresh | spent | {"standalone": standalone}
 
     def resolve_paper(self, state: AgentState) -> dict[str, Any]:
         route = self.d.cfg.route
-        votes = vote(self.d.corpus.search(state["standalone"], route.top_k))
-        # a paper is named in what the user typed; the vote uses the condensed question
+        # The vote runs on what the user typed: the condensed question carries the previous
+        # turn's topic, which would hide every switch. It only helps retrieval in the paper.
+        votes = vote(self.d.corpus.search(state["text"], route.top_k))
         decision, paper_id = decide(
             state["text"], state.get("active_paper_id"), votes, self.d.titles, route
         )

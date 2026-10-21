@@ -33,14 +33,12 @@ CONVS = [
 QUESTIONS = {
     qid: question(qid, paper) for qid, paper in [("q1", "A"), ("q2", "A"), ("q3", "B"), ("q4", "B")]
 }
-SAME = '{"question": "Which fruit again?"}'
-NAMED = '{"question": "About the Beta paper: which fruit?"}'
 
 
 def test_agent_conversation_records() -> None:
     # c0: clear vote A, then a split vote (stay on A), then B named; c1: split vote -> clarify
     votes = [["A"] * 10, ["A", "B"] * 5, ["A"] * 10, ["A", "B"] * 5]
-    graph, _, _, _ = make(votes, [ANSWER, SAME, ANSWER, NAMED, ANSWER, ANSWER])
+    graph, _, _, _ = make(votes, [ANSWER] * 4)  # no referring words: condense never calls the LLM
     records = run_conversations(CONVS, QUESTIONS, TITLES, [1], "paragraph", graph=graph)
     assert [r.question_id for r in records] == ["q1", "q2", "q3", "q4"]
     assert [r.decision for r in records] == ["vote", "stay", "named", "clarify"]

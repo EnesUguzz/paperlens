@@ -543,6 +543,26 @@ class CondenseConfig(_Section):
             "(condense.changed_rate in the report)."
         ),
     )
+    triggers: list[str] = Field(
+        default_factory=lambda: [
+            r"\bit\b",
+            r"\bits\b",
+            r"\bthem\b",
+            r"\bthat\b",
+            r"\bthose\b",
+            r"\bthere\b",
+            r"\bsame\b",
+            r"\b(former|latter)\b",
+            r"^\s*(and|what about|how about)\b",
+        ],
+        description=(
+            "What: regexes (case-insensitive) that mark a message as a follow-up; only then is "
+            "the condense LLM called. 'they'/'their' are left out on purpose: in papers they "
+            "mean the authors. Effect: a 14B model rewrites most standalone questions anyway "
+            "(adds titles, fixes typos), so the gate keeps condense.changed_rate low; a missing "
+            "pattern leaves that kind of follow-up unresolved."
+        ),
+    )
     history_turns: int = Field(
         3,
         ge=1,

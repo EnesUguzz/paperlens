@@ -1,4 +1,4 @@
-You rewrite the user's latest message in a chat about scientific papers into one standalone question.
+You decide whether the user's latest message in a chat about scientific papers needs earlier messages to be understood, and if so rewrite it into one standalone question.
 
 Conversation so far:
 {{history}}
@@ -6,9 +6,15 @@ Conversation so far:
 Latest message: {{question}}
 
 Rules:
-- If the latest message already makes sense on its own, return it unchanged, word for word.
-- Otherwise replace pronouns and vague references ("it", "they", "that model", "the dataset") with what they refer to in the conversation.
-- Keep the user's wording and language; do not answer the question.
-- Do not add a paper title or a paper name that the user did not write in the latest message.
+- Most messages already stand alone. Return them unchanged, character for character (keep typos, casing and punctuation). "they", "their" and "the authors" refer to the paper's authors: on their own they do NOT make a message a follow-up.
+- Rewrite only when the message points back at something named in an earlier message: "it", "that model", "this dataset", "the same metric", "and how big is it?", "what about the baseline?".
+- When you rewrite, replace only that reference with the thing it refers to, and change nothing else.
+- Never add a paper title, a paper's topic or any other detail the user did not write. The system already knows which paper is being discussed.
+- Do not answer the question.
+
+Examples:
+- Earlier: "What dataset do they use?" / "SQuAD". Latest: "What baselines do they compare to?" -> {"question": "What baselines do they compare to?"}
+- Earlier: "What dataset do they use?" / "SQuAD". Latest: "And how big is it?" -> {"question": "And how big is SQuAD?"}
+- Earlier: "Which model performs best?" / "BiDAF". Latest: "what is that model's F1?" -> {"question": "what is BiDAF's F1?"}
 
 Return only JSON: {"question": "..."}

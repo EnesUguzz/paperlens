@@ -36,9 +36,11 @@ class StubCorpus:
     def __init__(self, votes: list[list[str]]) -> None:
         self.votes = votes
         self.filters: list[str | None] = []
+        self.queries: list[str] = []
 
     def search(self, query: str, k: int, paper_id: str | None = None) -> list[ScoredChunk]:
         self.filters.append(paper_id)
+        self.queries.append(query)
         return [chunk(p, i) for i, p in enumerate(self.votes.pop(0))]
 
 
@@ -121,8 +123,8 @@ def test_stay_on_active() -> None:
 
 
 def test_named_switch() -> None:
-    same = '{"question": "About the Beta paper: which fruit?"}'
-    graph, retriever, _, _ = make([["A"] * 10, ["A"] * 10], [ANSWER, same, ANSWER])
+    # no referring word -> condense makes no LLM call
+    graph, retriever, _, _ = make([["A"] * 10, ["A"] * 10], [ANSWER, ANSWER])
     turn(graph, "t", "Which fruit?")
     state, _ = turn(graph, "t", "About the Beta paper: which fruit?", qid="q2")
     assert state["decision"] == "named" and state["active_paper_id"] == "B"
@@ -142,3 +144,30 @@ def test_no_gold_paper_id_read() -> None:
     graph, retriever, corpus, _ = make([["A"] * 10], [ANSWER])
     turn(graph, "t", "Which fruit?")
     assert "GOLD" not in retriever.filters and corpus.filters == [None]
+
+
+def test_vote_uses_typed_text_not_condensed() -> None:
+    # the condensed question drags in the old topic; switches are detected on what was typed
+    condensed = '{"question": "Which colour is the fruit in the apples paper?"}'
+    graph, _, corpus, _ = make([["A"] * 10, ["B"] * 10], [ANSWER, condensed, ANSWER])
+    turn(graph, "t", "Which fruit?")
+    state, _ = turn(graph, "t", "Which colour is it?", qid="q2")
+    assert corpus.queries == ["Which fruit?", "Which colour is it?"]
+    assert state["standalone"] == "Which colour is the fruit in the apples paper?"
+
+
+def test_condense_rejects_added_paper_title() -> None:
+    added = '{"question": "In Alpha: a paper about apples, which colour?"}'
+    graph, _, _, _ = make([["A"] * 10, ["A"] * 10], [ANSWER, added, ANSWER])
+    turn(graph, "t", "Which fruit?")
+    state, _ = turn(graph, "t", "Which colour is it?", qid="q2")
+    assert state["standalone"] == "Which colour is it?"
+    assert state["condense_error"] == "rejected: added a paper title"
+
+
+def test_condense_only_on_referring_words() -> None:
+    graph, _, _, llm = make([["A"] * 10, ["A"] * 10], [ANSWER, ANSWER])
+    turn(graph, "t", "Which fruit?")
+    state, _ = turn(graph, "t", "What baselines do they compare to?", qid="q2")
+    assert state["standalone"] == "What baselines do they compare to?"
+    assert state["llm_calls"] == 1 and len(llm.calls) == 2  # two generate calls, no condense
