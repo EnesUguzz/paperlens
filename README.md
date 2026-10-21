@@ -2,8 +2,9 @@
 
 Agentic RAG over scientific papers (QASPER), built to measure every design choice.
 
-> Work in progress — milestone M1a done: baseline RAG + evaluation loop + first ablations.
-> Next: PDF parsing with Docling, reranking, query rewriting (M1b), then a LangGraph agent (M2).
+> Milestones: M1a baseline RAG + evaluation loop · M1b chunking / citations / reranking /
+> query rewriting / Docling ablations · **M2 conversational LangGraph agent over all papers**
+> (results below). Walkthrough notebooks (Turkish) are in [`notebooks/`](notebooks/).
 
 **So far:** on 250 QASPER validation questions, a fully local stack (bge-m3 + ministral-3:14b
 on one RTX 5080) reaches **0.456 answer F1** (official QASPER metric) with `top_k=10`, up from
@@ -139,6 +140,82 @@ Full table with every config field: [`evals/results/SUMMARY.md`](evals/results/S
   is higher, 0.532, so part of the gap is wording that differs from QASPER's gold text). 90.4% of gold evidence aligns to PDF
   paragraphs (`data.evidence_aligned_rate` 0.904), one paper could not be downloaded from
   arXiv (`data.papers_missing` 1), and p95 latency is 3.3 s.
+
+### M2: a conversational agent over all 281 papers ([decision record](docs/decisions/003-m2-agent.md))
+
+In M1 every question came with its paper. In M2 a user chats without naming the paper and
+sometimes switches papers mid-conversation. A LangGraph agent (`src/paperlens/graph/`) handles
+this in five steps:
+
+1. condense a follow-up into a standalone question,
+2. find the paper,
+3. ask "which paper?" when it cannot tell,
+4. retrieve inside that paper,
+5. answer with paragraph citations.
+
+```mermaid
+flowchart TD
+    S([user message]) --> CO[condense]
+    CO --> R[resolve_paper<br/>title match, else corpus vote]
+    R -->|named / vote / stay| RET[retrieve in that paper]
+    R -->|unclear, no active paper| C[clarify: which paper?<br/>interrupt]
+    C -->|reply names a paper| RET
+    C -->|no match| REF[refuse]
+    RET --> GEN[generate<br/>paragraph citations]
+```
+
+**Eval setup:**
+- The same 250 questions are mixed into 57 synthetic conversations of 3 papers each
+  (`evals/conversations/m2.jsonl`, fixed seed). The conversations include returns to an
+  earlier paper.
+- Half of the paper switches name the paper, with 3 templates (full title or short name).
+  The other half do not.
+- When the agent asks "which paper?", a simulated user replies with the right title.
+- Nothing reveals the gold paper to the agent.
+
+Three systems are compared:
+- `m1b_best`: gold paper given, the ceiling.
+- `m2_corpus_rag`: the same pipeline searching all papers with no history, the floor.
+- `m2_agent`.
+
+| System | answer F1 | evidence F1 | judge acc. | right paper | asked "which?" | wrong paper, unasked | p95 |
+|---|---|---|---|---|---|---|---|
+| m1b_best (paper given) | 0.440 | 0.491 | 0.568 | 1.000 | – | – | 1.6 s |
+| m2_corpus_rag | 0.216 | 0.181 | 0.248 | 0.456 | 0 % | 49.2 % | 1.9 s |
+| **m2_agent** | **0.293** | **0.295** | **0.336** | **0.676** | 7.6 % | **21.6 %** | 1.7 s |
+
+Agent vs corpus_rag: answer F1 **+0.077 [+0.039, +0.113]** and evidence F1
+**+0.114 [+0.070, +0.159]** (paired bootstrap, 95% CI). Agent vs the paper-given ceiling:
+−0.148 [−0.195, −0.100] answer F1.
+
+| Turn type (n) | right paper: corpus_rag → agent | answer F1: corpus_rag → agent |
+|---|---|---|
+| first turn (57) | 0.60 → **0.98** | 0.20 → **0.39** |
+| same paper as before (54) | 0.26 → **0.63** | 0.24 → 0.27 |
+| switch, paper named (67) | 0.69 → **1.00** | 0.30 → **0.39** |
+| switch, paper not named (72) | **0.28** → 0.17 | 0.13 → 0.14 |
+
+- **Memory and naming carry the gain.** A named paper is always caught, for every template.
+  First turns resolve to the right paper 98% of the time, and only 19 of them needed a
+  clarifying question. On `same` turns, remembering the active paper more than doubles paper
+  accuracy.
+- **Unsignaled switches are the designed weak spot.** With an active paper, an unclear
+  question means "same paper", as a person would assume, so 56 of the 72 silent switches stay
+  on the old paper. A missed switch also carries over: 14 of the 54 `same` turns stay on a
+  paper chosen wrongly earlier.
+- **Asking is not what wins.** Without the 19 clarified turns, answer F1 is still 0.281.
+- **condense needed a hard gate.** Asked to leave standalone questions alone, ministral-3:14b
+  still rewrote 74% of them. It often appended the previous paper's title, which hid every
+  switch.
+  - **Fix:** the corpus vote now runs on the typed text.
+  - **Fix:** condense only runs when the message has a referring word (`agent.condense.triggers`).
+  - **Fix:** a rewrite that adds a paper title is rejected.
+  - With these, the rewrite rate on QASPER questions is 1.2%, and answer F1 went from 0.266
+    to 0.293.
+  - Follow-ups such as "and how big is it?" are shown in [`docs/m2_demo.md`](docs/m2_demo.md)
+    (`make converse`).
+- **Every conversation is an MLflow trace,** with one span per node: `uv run mlflow ui
+  --backend-store-uri sqlite:///mlflow.db`, experiment `m2`, then Traces.
 
 ### Reproducibility
 
