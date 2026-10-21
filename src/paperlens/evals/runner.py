@@ -72,11 +72,9 @@ def _run_conversations(
     k_values: Sequence[int],
 ) -> list[EvalRecord]:
     """M2: mix the sample into conversations, then play them through corpus_rag or the agent."""
-    from langgraph.checkpoint.memory import InMemorySaver
-
     from paperlens.evals.conversation_runner import enable_tracing, run_conversations
     from paperlens.evals.conversations import build_conversations, save_conversations
-    from paperlens.graph.build import build_agent_deps, build_graph
+    from paperlens.graph.build import build_agent_deps, build_graph, make_checkpointer
 
     conversations = build_conversations(sample, titles, cfg.conversations)
     save_conversations(conversations, cfg.conversations.path)
@@ -93,7 +91,7 @@ def _run_conversations(
             log_every=cfg.eval.log_every,
         )
     tracing = cfg.agent.tracing and enable_tracing(cfg)
-    graph = build_graph(build_agent_deps(cfg, bundle, llm, titles), InMemorySaver())
+    graph = build_graph(build_agent_deps(cfg, bundle, llm, titles), make_checkpointer())
     return run_conversations(
         conversations,
         questions,

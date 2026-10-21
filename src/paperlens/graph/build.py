@@ -16,6 +16,8 @@ from __future__ import annotations
 from collections.abc import Mapping
 from typing import Any
 
+from langgraph.checkpoint.memory import InMemorySaver
+from langgraph.checkpoint.serde.jsonplus import JsonPlusSerializer
 from langgraph.graph import END, START, StateGraph
 
 from paperlens.config.models import AppConfig
@@ -26,7 +28,18 @@ from paperlens.llm.client import LLMClient
 from paperlens.pipelines.factory import build_pipeline
 from paperlens.retrieval.retriever import Retriever
 
-__all__ = ["AgentDeps", "build_agent_deps", "build_graph"]
+__all__ = ["AgentDeps", "build_agent_deps", "build_graph", "make_checkpointer"]
+
+# pydantic types the state holds; LangGraph only restores allow-listed classes from a checkpoint
+STATE_TYPES = [
+    ("paperlens.domain", name)
+    for name in ("Question", "Reference", "Answer", "Usage", "ScoredChunk", "Chunk", "Segment")
+]
+
+
+def make_checkpointer() -> InMemorySaver:
+    """In-memory conversation memory (one thread per conversation) that can restore our types."""
+    return InMemorySaver(serde=JsonPlusSerializer(allowed_msgpack_modules=STATE_TYPES))
 
 
 def _after_resolve(state: AgentState) -> str:

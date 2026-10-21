@@ -1,11 +1,10 @@
 from pathlib import Path
 
-from langgraph.checkpoint.memory import InMemorySaver
 from langgraph.types import Command
 
 from paperlens.config.models import AgentConfig
 from paperlens.domain import Chunk, Question, Reference, ScoredChunk, Segment
-from paperlens.graph.build import AgentDeps, build_graph
+from paperlens.graph.build import AgentDeps, build_graph, make_checkpointer
 from paperlens.llm.client import LLMError
 from paperlens.llm.fake import FakeLLM
 from paperlens.pipelines.baseline import BaselinePipeline
@@ -73,7 +72,7 @@ def make(votes: list[list[str]], replies: list[str | Exception]):
         cfg=AgentConfig(tracing=False),
         condense_template=CONDENSE,
     )
-    return build_graph(deps, InMemorySaver()), retriever, corpus, llm
+    return build_graph(deps, make_checkpointer()), retriever, corpus, llm
 
 
 def turn(graph, thread: str, text: str, qid: str = "q1"):

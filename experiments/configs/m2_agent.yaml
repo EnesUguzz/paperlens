@@ -1,0 +1,20 @@
+# M2 agent: LangGraph flow condense -> resolve_paper -> (clarify) -> retrieve -> generate over
+# the conversations built from the m1b_best sample (evals/conversations/m2.jsonl).
+# Retrieval and generation are m1b_best's; the tunable knob is agent.route.min_lead.
+extends: m1b_best.yaml
+agent:
+  condense:
+    enabled: true
+    history_turns: 3
+  route:
+    top_k: 10              # corpus chunks that vote on the paper
+    min_lead: 0.3          # top share - runner-up share needed to pick a paper without asking
+    title_match_min: 90    # full-title partial_ratio needed to count as naming a paper
+  clarify:
+    max_candidates: 3
+  tracing: true            # one MLflow trace per conversation (mlflow ui -> Traces)
+eval:
+  system: agent
+  experiment_name: m2
+  run_name: m2_agent
+  reference_run: m1b_best

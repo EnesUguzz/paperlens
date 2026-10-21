@@ -1,0 +1,9 @@
+# M2 floor: the m1b_best pipeline over the conversations, but every turn is searched over all
+# papers with no history and no routing (the top chunk's paper title goes into the prompt).
+# Compare: m1b_best (same questions, gold paper given) is the ceiling; m2_agent is the system.
+extends: m1b_best.yaml
+eval:
+  system: corpus_rag
+  experiment_name: m2
+  run_name: m2_corpus_rag
+  reference_run: m1b_best
