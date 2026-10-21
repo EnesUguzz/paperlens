@@ -13,6 +13,9 @@
 | `judge.py` | local LLM-as-judge: secondary `judge.*` metrics from rules + an LLM verdict (`paperlens judge`) |
 | `rescore.py` | recompute metrics/reports of saved runs without the LLM (`paperlens rescore`) |
 | `tracking.py` | MLflow logging |
-| `runner.py` | wires everything for one YAML config |
+| `conversations.py` | M2: mixes the sample into deterministic multi-paper conversations (`evals/conversations/m2.jsonl`) |
+| `conversation_runner.py` | M2: plays the conversations through `corpus_rag` or the agent (a simulated user answers "which paper?"), one record per turn |
+| `routing_metrics.py` | M2: `route.*` metrics (paper accuracy per turn type, signaled-switch catch per template, clarify and wrong-paper rates) |
+| `runner.py` | wires everything for one YAML config (`eval.system` picks single-paper vs conversations) |
 
 Metrics have no parameters on purpose: if the ruler changes, runs stop being comparable.
