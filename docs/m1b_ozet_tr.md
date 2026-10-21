@@ -4,7 +4,7 @@ M1b'nin sorusu: **M1a'daki baseline RAG'i hangi değişiklikler gerçekten iyile
 
 ## Tek cümlelik sonuç
 
-Cevap doğruluğunu (answer_f1) kanıtlanmış biçimde artıran bir değişiklik bulunmadı. **Kanıt göstermeyi** (evidence_f1) ise iki değişiklik açıkça artırdı: **bölüm chunking** ve **paragraf atfı**. İkisinin birleşimi M2'nin karşılaştırma noktası olacak aday pipeline.
+Cevap doğruluğunu (answer_f1) kanıtlanmış biçimde artıran bir değişiklik bulunmadı. **Kanıt göstermeyi** (evidence_f1) ise iki değişiklik açıkça artırdı: **bölüm chunking** ve **paragraf atfı**. İkisinin birleşimi (`m1b_best`) M2'nin karşılaştırma noktası.
 
 ## İki temel kavram
 
@@ -53,7 +53,7 @@ Tavan, getirilen chunk'larla kusursuz atıf yapılsaydı ulaşılabilecek en iyi
 | 9 | Semantik chunking: cümle embedding'leri arasındaki anlam uzaklığına göre bölme | `ingestion/chunkers.py` | `chunking.strategy: semantic`, `chunking.semantic_*` |
 | 10 | arXiv'den PDF indirme ve Docling ile ayrıştırma | `ingestion/pdf.py`, `ingestion/docling_parser.py`, `paperlens prepare-pdfs` | `data.pdf_*` |
 | 11 | Gold kanıtı PDF paragraflarına hizalama (rapidfuzz) | `ingestion/align.py`, `ingestion/sources.py` | `data.text_source`, `data.align_*` |
-| 12 | Deneyler, `make m1b`, README, karar kaydı | `experiments/configs/m1b/`, `m1b_best.yaml`, `m1b_section_best.yaml` | — |
+| 12 | Deneyler, `make m1b`, README, karar kaydı | `experiments/configs/m1b/`, `m1b_semantic_best.yaml`, `m1b_best.yaml` | — |
 
 ## Sonuçlar (250 soru)
 
@@ -71,8 +71,8 @@ Judge değerleri son inceleme turundaki kural düzeltmesinden sonraki değerlerd
 | chunk_semantic | .427 | +.009 [−.030, +.045] | **+.116 [+.071, +.160]** | .548 | .413 / .658 | .667 | 1501 |
 | chunk_section_200 (M1a) | .442 | +.024 [−.013, +.058] | **+.128 [+.079, +.172]** | .556 | .425 / .664 | .665 | 1451 |
 | source_docling | .404 | −.015 [−.057, +.025] | **−.044 [−.083, −.007]** | .532 | .253 / .484 | .660 | 3339 |
-| m1b_best (semantic + paragraf) | .435 | +.016 [−.024, +.053] | **+.173 [+.122, +.224]** | .540 | .469 / .767 | .667 | 1538 |
-| **m1b_section_best (section + paragraf)** | **.440** | +.022 [−.015, +.056] | **+.194 [+.144, +.242]** | **.568** | **.491** / .770 | .665 | 1642 |
+| m1b_semantic_best (semantic + paragraf) | .435 | +.016 [−.024, +.053] | **+.173 [+.122, +.224]** | .540 | .469 / .767 | .667 | 1538 |
+| **m1b_best (section + paragraf)** | **.440** | +.022 [−.015, +.056] | **+.194 [+.144, +.242]** | **.568** | **.491** / .770 | .665 | 1642 |
 
 20'den fazla karşılaştırma yapıldı. Bu kadar karşılaştırmada birkaç tanesi şans eseri "anlamlı" çıkabilir. Bu yüzden büyük ve tutarlı farklara güveniyoruz. evidence_f1'deki +.12–.19'luk kazançlar bu türden; source_docling'deki −.044 ise sınırda.
 
@@ -95,16 +95,25 @@ Değişikliklerin tek tek kazançları birleşince toplanmıyor. Paragraf atfı 
 - **Judge kuralı:** Annotatörlerin bir kısmı "cevaplanamaz", bir kısmı cevap verdiğinde, cevaplanabilir referansla eşleşen bir cevap da otomatik olarak yanlış sayılıyordu. Artık bu durum LLM'e gidiyor. Bütün koşuların judge accuracy'si 0.016–0.032 arttı.
 - **Judge önbelleği:** Kurallar artık önbellekteki LLM kararlarından önce uygulanıyor. `judge` ve `rescore` komutları aynı sırayı izliyor.
 
+## Judge doğrulaması
+
+qwen3:14b judge'ının kararları, LLM'e giden 190 cevapta daha güçlü bir modelin (Claude) kör etiketleriyle karşılaştırıldı.
+
+- Uyum %82.6, kappa .65. Hatalar iki yönde: eksik listeleri ve konuyu adlandırıp bilgi vermeyen cevapları kabul ediyor (15), farklı kelimelerle yazılmış doğru cevapları reddediyor (18).
+- Tutarlı: ikinci kez sorulunca 342 kararın 340'ı aynı. Referans sırası ters çevrilince 13'ü (%3.8) değişiyor.
+- Kuralları netleştirilmiş bir prompt ve gpt-oss:20b judge'ı da %83.2'de kaldı; prompt ve model değişmedi.
+- Eşli 45 soruda bütün judge'lar `m1b_best`'i baseline'dan iyi buluyor, ama fark judge'a göre +.02 ile +.18 arası. Judge farkı yön olarak okunuyor, büyüklük olarak değil.
+
 ## M2'ye ne taşınıyor
 
-- **Karşılaştırma noktası (baseline):** bölüm chunking + paragraf atfı (`experiments/configs/m1b_section_best.yaml`). Kesin karar kaydı senin onayınla `m1b_best` olarak güncellenecek.
+- **Karşılaştırma noktası (baseline):** bölüm chunking + paragraf atfı (`experiments/configs/m1b_best.yaml`). Semantik versiyon `m1b_semantic_best.yaml` olarak duruyor.
 - **M2'nin konusu:** LangGraph ile agentic pipeline ve korpus modu, yani soru hangi makalede bilinmeden 281 makalenin hepsinde arama. Reranker, multi-query ve HyDE orada yeniden denenecek, çünkü aday havuzu artık tek bir makale değil.
 
 ## Komutlar
 
 ```bash
 make notebook                 # defterleri JupyterLab'de aç (http://localhost:8888)
-uv run paperlens trace --config experiments/configs/m1b_section_best.yaml --index 16
+uv run paperlens trace --config experiments/configs/m1b_best.yaml --index 16
 uv run paperlens summarize --out evals/results/SUMMARY.md
 make m1b                      # bütün M1b deneylerini baştan koş (GPU + Ollama, saatler sürer)
 ```

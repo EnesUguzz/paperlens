@@ -4,7 +4,8 @@
 - Status: accepted
 - Setup: QASPER validation, 250 questions (seed 13), ministral-3:14b (decision 001), temperature 0,
   Ollama 0.40.6, RTX 5080 16 GB, judge qwen3:14b.
-- Runs: `experiments/configs/m1b/*.yaml` and `experiments/configs/m1b_best.yaml`, results in
+- Runs: `experiments/configs/m1b/*.yaml`, `experiments/configs/m1b_best.yaml` and
+  `experiments/configs/m1b_semantic_best.yaml`, results in
   `evals/results/<run>/`, table in `evals/results/SUMMARY.md` (`make m1b` reproduces all of it
   after `make prepare-pdfs`, about 1 h of arXiv downloads and Docling parsing, which
   `source_docling` needs; `make m1b` runs `uv sync --extra ml --extra pdf`, which drops the
@@ -17,7 +18,9 @@
 | Run | answer F1 | Δ [95% CI] | judge acc. | evidence F1 / ceiling | Recall@5 | false refusal | p95 |
 |---|---|---|---|---|---|---|---|
 | baseline | 0.419 | | 0.500 | 0.297 / 0.524 | 0.703 | 4.2% | 1851 ms |
-| **m1b_best** | 0.435 | +0.016 [-0.024, +0.053] | 0.540 | 0.469 / 0.767 | 0.667 | 5.6% | 1538 ms |
+| **m1b_best** | 0.440 | +0.022 [-0.015, +0.056] | 0.568 | 0.491 / 0.770 | 0.665 | 6.1% | 1642 ms |
+| m1b_semantic_best | 0.435 | +0.016 [-0.024, +0.053] | 0.540 | 0.469 / 0.767 | 0.667 | 5.6% | 1538 ms |
+| chunk_section_200 (M1a) | 0.442 | +0.024 [-0.013, +0.058] | 0.556 | 0.425 / 0.664 | 0.665 | 6.1% | 1451 ms |
 | chunk_semantic | 0.427 | +0.009 [-0.030, +0.045] | 0.548 | 0.413 / 0.658 | 0.667 | 6.6% | 1501 ms |
 | cite_paragraph | 0.421 | +0.002 [-0.018, +0.023] | 0.524 | 0.455 / 0.787 | 0.703 | 4.7% | 1809 ms |
 | prompt_v2 | 0.421 | +0.003 [-0.019, +0.026] | 0.528 | 0.292 / 0.524 | 0.703 | 3.8% | 1624 ms |
@@ -32,23 +35,46 @@ Error rate was 0 in every run.
 ## Decision
 
 **M2's baseline is `experiments/configs/m1b_best.yaml`:** extends the M1a baseline with
-semantic chunking (`chunking.strategy: semantic`) and paragraph-level citations
-(`generation.cite_unit: paragraph`).
+section chunking (`chunking.strategy: section`, paragraph-aligned chunks that never cross a
+section, `chunk_overlap: 0`) and paragraph-level citations (`generation.cite_unit: paragraph`).
 
 **This is chosen on Evidence-F1, not on Answer-F1.** No Answer-F1 delta in M1b has a 95% CI
-excluding 0, including `m1b_best` (+0.016 [-0.024, +0.053]). With 250 questions we cannot
+excluding 0, including `m1b_best` (+0.022 [-0.015, +0.056]). With 250 questions we cannot
 claim better answers; we claim better-grounded citations at no measurable cost to answers:
 
-- Evidence-F1 0.297 to 0.469, evidence ceiling 0.524 to 0.767.
-- judge.accuracy 0.500 to 0.540 (a lead, not a proven gain).
-- p95 latency 1851 to 1538 ms (shorter contexts).
+- Evidence-F1 0.297 to 0.491 (Δ +0.194 [+0.144, +0.242]), evidence ceiling 0.524 to 0.770.
+- judge.accuracy 0.500 to 0.568 (direction only, see Judge validation).
+- p95 latency 1851 to 1642 ms.
 
-**Costs:** Recall@5 0.703 to 0.667 and false refusal 4.2% to 5.6%, both from semantic chunks.
+**Costs:** Recall@5 0.703 to 0.665 and false refusal 4.2% to 6.1%.
 
-**The combination is sub-additive.** The single changes add +0.116 (semantic) and +0.158
-(paragraph citations) Evidence-F1, but together give +0.172. The ceiling is 0.767, below
-cite_paragraph alone (0.787). Paragraph citations already remove most of the chunk-overlap
-noise that semantic chunking also reduces, so the two partly cover the same gain.
+**Why section over semantic chunking.** `m1b_semantic_best` (semantic chunks + paragraph
+citations) is behind on every headline metric (Answer-F1 0.435, Evidence-F1 0.469, judge 0.540)
+and needs a sentence-embedding pass to chunk. Section chunking was already the best M1a
+chunker; M1b first combined paragraph citations with semantic chunking and only later with
+section chunking.
+
+**The combination is sub-additive.** Paragraph citations alone add +0.158 Evidence-F1, section
+chunking +0.128, together +0.194. Both reduce the same noise (citing paragraphs of a chunk that
+are not evidence), so the second change has less left to fix.
+
+## Judge validation
+
+`judge.accuracy` is a secondary metric. It was audited on 190 LLM-judged answers (100 random
+from baseline and m1b_best, plus 45 questions x 2 answers from both runs, labelled blind to run
+and to the judge's verdict) against labels from a stronger model (Claude, rubric: correct iff the
+answer gives the key information of at least one reference; a list must be all-correct and cover
+more than half of a reference).
+
+- Agreement 82.6%, Cohen's kappa 0.65; errors both ways (15 too lenient: partial lists, topic-only
+  answers, unchecked numbers; 18 too strict: paraphrases, abbreviations).
+- Repeatable: 340/342 identical verdicts on a second pass; reversing the reference order flips
+  13/342 (3.8%).
+- A stricter prompt (rules for numbers and lists) and gpt-oss:20b as judge both reach 83.2%,
+  i.e. no measurable gain, so `prompts/judge.md` and qwen3:14b stay.
+- On the 45 paired questions every judge finds m1b_best better than baseline, but the size
+  varies: +0.13 (Claude labels, 95% CI [0.00, +0.27]), +0.18 (qwen3:14b), +0.11 (stricter
+  prompt), +0.02 (gpt-oss:20b). Judge deltas are read as direction, not size.
 
 ## Rejected options
 
@@ -73,7 +99,8 @@ noise that semantic chunking also reduces, so the two partly cover the same gain
 - 25 comparisons at 95% without correction: about 1.3 CIs would exclude 0 by chance.
 - Evidence-F1 is comparable across runs only at equal chunking and citation unit; the ceiling
   column shows how much of a change is the unit and how much is the model's citing.
-- Metrics other than Answer-F1 (Evidence-F1, judge.accuracy) have no CI in SUMMARY.md.
+- Metrics other than Answer-F1 (Evidence-F1, judge.accuracy) have no CI in SUMMARY.md; the
+  Evidence-F1 CIs above come from the same paired bootstrap, the judge has none.
 - `judge.agreement_on_high_f1` is below the 0.95 sanity bar on several runs, lowest on source_docling (0.870),
   rerank / hybrid_rerank (0.929) and model_qwen3_14b (0.850), over only 14-23 LLM-judged
   high-F1 answers each; judge.accuracy for those runs is less trustworthy.
@@ -83,3 +110,5 @@ noise that semantic chunking also reduces, so the two partly cover the same gain
 - M2 compares the agentic pipeline against `m1b_best`, on the full validation set (1005
   questions) to tighten CIs.
 - Re-test reranking and hybrid retrieval in M2's corpus mode.
+- Add a paired-bootstrap CI for judge.accuracy deltas, and grow the paired judge audit before
+  claiming a judge-measured size.

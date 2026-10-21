@@ -1,21 +1,19 @@
-# M1b best: the two changes that moved Evidence-F1 without hurting Answer-F1, combined.
-# - chunking.strategy: semantic (m1b/chunk_semantic: evidence_f1 .297 -> .413, judge .480 -> .524,
-#   p95 latency 1851 -> 1501 ms; cost: recall@5 .703 -> .667, false_refusal .042 -> .066)
+# M1b best (M2's baseline): M1a section chunking + paragraph citations.
+# - chunking.strategy: section (m1a/chunk_section_200: evidence_f1 .297 -> .425, judge .500 -> .556,
+#   p95 latency 1851 -> 1451 ms; paragraph-aligned chunks that never cross a section)
 # - generation.cite_unit: paragraph (m1b/cite_paragraph: evidence_f1 .297 -> .455, ceiling .524 -> .787)
-# Rejected (see evals/results/SUMMARY.md): rerank / hybrid_rerank (answer_f1 -.032, +1 s; in
-# per-paper mode the 30-candidate pool already covers almost the whole paper), multi_query and
-# hyde (no gain, 1.5-2x latency), prompt_v2 (refusal_recall .270 -> .216), source_docling
-# (worse Answer-F1, Evidence-F1, Recall@5 and latency; ~10% of gold evidence does not align to
-# PDF paragraphs).
-# The two gains are sub-additive: evidence_f1 +.172 vs +.116 and +.158 alone; ceiling .767 < .787.
-# No Answer-F1 delta in M1b had a 95% CI excluding 0, so this config is chosen on Evidence-F1.
-# Reuses the semantic index (same chunking key as m1b/chunk_semantic), so no rebuild.
+# Result vs baseline: answer_f1 +.022 [-.015, +.056], evidence_f1 +.194 [+.144, +.242], judge
+# .500 -> .568 (see docs/decisions/002-m1b-pipeline.md for the judge validation).
+# Chosen over m1b_semantic_best.yaml (semantic chunks + paragraph citations), which is behind on
+# Answer-F1, Evidence-F1 and judge accuracy and needs a sentence-embedding pass to chunk.
+# Rejected (see evals/results/SUMMARY.md): rerank / hybrid_rerank, multi_query, hyde, prompt_v2,
+# source_docling. No Answer-F1 delta in M1b had a 95% CI excluding 0, so this config is chosen
+# on Evidence-F1. Reuses the section_200 index (section chunks carry paragraph segments).
 extends: baseline.yaml
 chunking:
-  strategy: semantic
+  strategy: section        # paragraph-aligned, never crosses a section
   chunk_size: 200
-  semantic_breakpoint_percentile: 90.0
-  semantic_min_words: 50
+  chunk_overlap: 0         # unused by 'section'
 generation:
   cite_unit: paragraph
 eval:
