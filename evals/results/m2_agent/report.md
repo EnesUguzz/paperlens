@@ -24,38 +24,38 @@
 
 | Metric | This run | Reference | Delta |
 |---|---|---|---|
-| answer_f1 | 0.293 | 0.440 | -0.148 |
-| answer_f1.abstractive | 0.189 | 0.247 | -0.058 |
-| answer_f1.extractive | 0.286 | 0.506 | -0.221 |
-| answer_f1.gold.abstractive | 0.243 | 0.325 | -0.082 |
+| answer_f1 | 0.290 | 0.440 | -0.151 |
+| answer_f1.abstractive | 0.190 | 0.247 | -0.058 |
+| answer_f1.extractive | 0.285 | 0.506 | -0.221 |
+| answer_f1.gold.abstractive | 0.244 | 0.325 | -0.081 |
 | answer_f1.gold.extractive | 0.274 | 0.503 | -0.229 |
-| answer_f1.gold.unanswerable | 0.408 | 0.440 | -0.032 |
+| answer_f1.gold.unanswerable | 0.388 | 0.440 | -0.052 |
 | answer_f1.gold.yes_no | 0.333 | 0.380 | -0.046 |
-| answer_f1.no_clarify | 0.281 | - | - |
-| answer_f1.turn.first | 0.394 | - | - |
-| answer_f1.turn.same | 0.265 | - | - |
-| answer_f1.turn.switch_signaled | 0.392 | - | - |
-| answer_f1.turn.switch_unsignaled | 0.141 | - | - |
-| answer_f1.unanswerable | 0.538 | 0.500 | +0.038 |
+| answer_f1.no_clarify | 0.279 | - | - |
+| answer_f1.turn.first | 0.396 | - | - |
+| answer_f1.turn.same | 0.264 | - | - |
+| answer_f1.turn.switch_signaled | 0.391 | - | - |
+| answer_f1.turn.switch_unsignaled | 0.131 | - | - |
+| answer_f1.unanswerable | 0.520 | 0.500 | +0.020 |
 | answer_f1.yes_no | 0.308 | 0.412 | -0.104 |
-| answer_words_mean | 12.080 | 14.192 | -2.112 |
-| completion_tokens_mean | 46.744 | 49.788 | -3.044 |
+| answer_words_mean | 12.312 | 14.192 | -1.880 |
+| completion_tokens_mean | 47.188 | 49.788 | -2.600 |
 | condense.changed_rate | 0.012 | - | - |
 | context_words_mean | 706.364 | 689.316 | +17.048 |
 | data.questions_dropped | 0.000 | 0.000 | +0.000 |
 | data.unmatched_evidence_rate | 0.046 | 0.046 | +0.000 |
 | error_rate | 0.000 | 0.000 | +0.000 |
-| evidence_f1 | 0.295 | 0.491 | -0.196 |
-| evidence_f1.no_clarify | 0.284 | - | - |
+| evidence_f1 | 0.293 | 0.491 | -0.198 |
+| evidence_f1.no_clarify | 0.282 | - | - |
 | evidence_f1_ceiling | 0.503 | 0.770 | -0.267 |
 | false_refusal_rate | 0.155 | 0.061 | +0.094 |
-| gold_recall | 0.327 | 0.507 | -0.179 |
+| gold_recall | 0.328 | 0.507 | -0.178 |
 | index.num_chunks | 8360.000 | 8360.000 | +0.000 |
-| latency_p50_ms | 994.090 | 963.592 | +30.498 |
-| latency_p95_ms | 1662.712 | 1642.370 | +20.342 |
+| latency_p50_ms | 1016.924 | 963.592 | +53.332 |
+| latency_p95_ms | 1749.370 | 1642.370 | +107.000 |
 | llm_calls_mean | 1.024 | - | - |
 | n.abstractive | 56.000 | 53.000 | +3.000 |
-| n.extractive | 142.000 | 142.000 | +0.000 |
+| n.extractive | 143.000 | 142.000 | +1.000 |
 | n.gold.abstractive | 58.000 | 58.000 | +0.000 |
 | n.gold.extractive | 131.000 | 131.000 | +0.000 |
 | n.gold.unanswerable | 37.000 | 37.000 | +0.000 |
@@ -65,13 +65,13 @@
 | n.turn.same | 54.000 | - | - |
 | n.turn.switch_signaled | 67.000 | - | - |
 | n.turn.switch_unsignaled | 72.000 | - | - |
-| n.unanswerable | 26.000 | 28.000 | -2.000 |
+| n.unanswerable | 25.000 | 28.000 | -3.000 |
 | n.yes_no | 26.000 | 27.000 | -1.000 |
 | n_questions | 250.000 | 250.000 | +0.000 |
 | prompt_tokens_max | 3005.000 | 2417.000 | +588.000 |
-| prompt_tokens_mean | 1828.260 | 1788.992 | +39.268 |
+| prompt_tokens_mean | 1828.208 | 1788.992 | +39.216 |
 | query_error_rate | 0.000 | 0.000 | +0.000 |
-| refusal_recall | 0.351 | 0.351 | +0.000 |
+| refusal_recall | 0.324 | 0.351 | -0.027 |
 | retrieval.doc_hit_rate | 0.676 | 1.000 | -0.324 |
 | retrieval.mrr | 0.237 | 0.484 | -0.247 |
 | retrieval.n | 230.000 | 230.000 | +0.000 |
@@ -92,7 +92,7 @@
 | route.signaled_catch.t1 | 1.000 | - | - |
 | route.signaled_catch.t2 | 1.000 | - | - |
 | route.unsignaled_catch | 0.167 | - | - |
-| route.wrong_paper_rate | 0.216 | - | - |
+| route.wrong_paper_rate | 0.220 | - | - |
 
 ## Biggest regressions
 

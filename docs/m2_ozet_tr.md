@@ -36,18 +36,18 @@ trace olarak, her node da bir span olarak yazılıyor.
 |---|---|---|---|---|---|
 | m1b_best | 0.440 | 0.491 | 1.00 | – | – |
 | m2_corpus_rag | 0.216 | 0.181 | 0.46 | %0 | %49 |
-| **m2_agent** | **0.293** | **0.295** | **0.68** | %7.6 | **%22** |
+| **m2_agent** | **0.290** | **0.293** | **0.68** | %7.6 | **%22** |
 
-- **Agent tabandan anlamlı derecede iyi.** answer F1 farkı +0.077 [+0.039, +0.113], evidence F1
-  farkı +0.114. İki güven aralığı da 0'ı içermiyor.
-- **Tavana göre −0.148.** Makaleyi doğru bulmak tek başına M1b seviyesine çıkarmıyor.
+- **Agent tabandan anlamlı derecede iyi.** answer F1 farkı +0.074 [+0.036, +0.111], evidence F1
+  farkı +0.112. İki güven aralığı da 0'ı içermiyor.
+- **Tavana göre −0.151.** Makaleyi doğru bulmak tek başına M1b seviyesine çıkarmıyor.
 - **Güçlü yanlar:** makale adı geçtiğinde %100 doğru makaleye gidiyor. İlk turlarda doğru
   makale oranı %98; bunların sadece 19'unda soru sordu. Aynı makaleden devam eden turlarda
   doğru makale oranı 0.26'dan 0.63'e çıkıyor.
 - **Bilinçli zayıf yan:** makale adı geçmeden yapılan geçişlerin çoğunu kaçırıyor (0.17).
   Aktif makale varken belirsiz bir soru "aynı makale" sayılıyor, bir insan da öyle varsayardı.
   Kaçırılan bir geçiş sonraki turları da etkiliyor.
-- **Soru sormak puanı şişirmiyor.** Soru sorulmayan turlarda da answer F1 0.281.
+- **Soru sormak puanı şişirmiyor.** Soru sorulmayan turlarda da answer F1 0.279.
 
 ## Yol üstünde bulduğumuz hata
 
@@ -61,7 +61,7 @@ Düzeltme:
   çalışıyor. Liste config'de: `agent.condense.triggers`.
 - Kullanıcının yazmadığı bir başlık eklenirse yeniden yazım reddediliyor.
 
-Bunlardan sonra değiştirme oranı %1.2'ye, answer F1 0.293'e çıktı.
+Bunlardan sonra değiştirme oranı %1.2'ye, answer F1 0.290'a çıktı.
 
 ## Senin ayarlayabileceklerin
 

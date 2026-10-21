@@ -182,18 +182,18 @@ Three systems are compared:
 |---|---|---|---|---|---|---|---|
 | m1b_best (paper given) | 0.440 | 0.491 | 0.568 | 1.000 | – | – | 1.6 s |
 | m2_corpus_rag | 0.216 | 0.181 | 0.248 | 0.456 | 0 % | 49.2 % | 1.9 s |
-| **m2_agent** | **0.293** | **0.295** | **0.336** | **0.676** | 7.6 % | **21.6 %** | 1.7 s |
+| **m2_agent** | **0.290** | **0.293** | **0.344** | **0.676** | 7.6 % | **22.0 %** | 1.7 s |
 
-Agent vs corpus_rag: answer F1 **+0.077 [+0.039, +0.113]** and evidence F1
-**+0.114 [+0.070, +0.159]** (paired bootstrap, 95% CI). Agent vs the paper-given ceiling:
-−0.148 [−0.195, −0.100] answer F1.
+Agent vs corpus_rag: answer F1 **+0.074 [+0.036, +0.111]** and evidence F1
+**+0.112 [+0.068, +0.156]** (paired bootstrap, 95% CI). Agent vs the paper-given ceiling:
+−0.151 [−0.199, −0.103] answer F1.
 
 | Turn type (n) | right paper: corpus_rag → agent | answer F1: corpus_rag → agent |
 |---|---|---|
-| first turn (57) | 0.60 → **0.98** | 0.20 → **0.39** |
-| same paper as before (54) | 0.26 → **0.63** | 0.24 → 0.27 |
+| first turn (57) | 0.60 → **0.98** | 0.20 → **0.40** |
+| same paper as before (54) | 0.26 → **0.63** | 0.24 → 0.26 |
 | switch, paper named (67) | 0.69 → **1.00** | 0.30 → **0.39** |
-| switch, paper not named (72) | **0.28** → 0.17 | 0.13 → 0.14 |
+| switch, paper not named (72) | **0.28** → 0.17 | 0.13 → 0.13 |
 
 - **Memory and naming carry the gain.** A named paper is always caught, for every template.
   First turns resolve to the right paper 98% of the time, and only 19 of them needed a
@@ -203,7 +203,7 @@ Agent vs corpus_rag: answer F1 **+0.077 [+0.039, +0.113]** and evidence F1
   question means "same paper", as a person would assume, so 56 of the 72 silent switches stay
   on the old paper. A missed switch also carries over: 14 of the 54 `same` turns stay on a
   paper chosen wrongly earlier.
-- **Asking is not what wins.** Without the 19 clarified turns, answer F1 is still 0.281.
+- **Asking is not what wins.** Without the 19 clarified turns, answer F1 is still 0.279.
 - **condense needed a hard gate.** Asked to leave standalone questions alone, ministral-3:14b
   still rewrote 74% of them. It often appended the previous paper's title, which hid every
   switch.
@@ -211,7 +211,7 @@ Agent vs corpus_rag: answer F1 **+0.077 [+0.039, +0.113]** and evidence F1
   - **Fix:** condense only runs when the message has a referring word (`agent.condense.triggers`).
   - **Fix:** a rewrite that adds a paper title is rejected.
   - With these, the rewrite rate on QASPER questions is 1.2%, and answer F1 went from 0.266
-    to 0.293.
+    to 0.290.
   - Follow-ups such as "and how big is it?" are shown in [`docs/m2_demo.md`](docs/m2_demo.md)
     (`make converse`).
 - **Every conversation is an MLflow trace,** with one span per node: `uv run mlflow ui

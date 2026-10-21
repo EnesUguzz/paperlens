@@ -99,8 +99,8 @@
   "conversations.path": "evals/conversations/m2.jsonl",
   "meta.prompt_sha256": "b9e0dd367503dd55",
   "meta.data_sha256": "089781b91c337d34",
-  "meta.git_sha": "d3eab8a",
-  "meta.git_dirty": "True",
+  "meta.git_sha": "1421dd5",
+  "meta.git_dirty": "False",
   "meta.llm_digest": "4760c35aeb9d",
   "meta.server_version": "0.40.6"
 }

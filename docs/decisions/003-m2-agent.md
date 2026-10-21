@@ -38,14 +38,14 @@ condense -> resolve_paper -> (clarify: interrupt) -> retrieve -> generate | refu
 |---|---|---|---|---|---|---|---|---|
 | m1b_best (gold paper) | 0.440 | 0.491 | 0.568 | 1.000 | – | – | 1.00 | 1.6 s |
 | m2_corpus_rag | 0.216 | 0.181 | 0.248 | 0.456 | 0.000 | 0.492 | 1.00 | 1.9 s |
-| m2_agent | 0.293 | 0.295 | 0.336 | 0.676 | 0.076 | 0.216 | 1.02 | 1.7 s |
+| m2_agent | 0.290 | 0.293 | 0.344 | 0.676 | 0.076 | 0.220 | 1.02 | 1.7 s |
 
 Paired bootstrap, 95% CI:
 
 | Comparison | answer F1 | evidence F1 |
 |---|---|---|
-| agent − corpus_rag | +0.077 [+0.039, +0.113] | +0.114 [+0.070, +0.159] |
-| agent − m1b_best | −0.148 [−0.195, −0.100] | −0.196 [−0.253, −0.139] |
+| agent − corpus_rag | +0.074 [+0.036, +0.111] | +0.112 [+0.068, +0.156] |
+| agent − m1b_best | −0.151 [−0.199, −0.103] | −0.198 [−0.256, −0.141] |
 
 Paper accuracy by turn type (corpus_rag → agent):
 
@@ -56,8 +56,8 @@ Paper accuracy by turn type (corpus_rag → agent):
 | `switch_signaled` | 67 | 0.69 | 1.00 |
 | `switch_unsignaled` | 72 | 0.28 | 0.17 |
 
-The agent's answers without the 19 clarified turns score answer F1 0.281 and evidence F1
-0.284, so asking is not what carries the result.
+The agent's answers without the 19 clarified turns score answer F1 0.279 and evidence F1
+0.282, so asking is not what carries the result.
 
 Agent decisions per turn type:
 
@@ -65,7 +65,7 @@ Agent decisions per turn type:
 |---|---|
 | `first` | named 32, clarify 19, vote 6 (5 right) |
 | `same` | stay 39 (25 / 14), vote 14 (8 / 6), named 1 |
-| `switch_signaled` | named 66, vote 1 |
+| `switch_signaled` | named 67 |
 | `switch_unsignaled` | stay 58 (2 / 56), vote 14 (10 / 4) |
 
 ## What changed after the first run
@@ -86,7 +86,7 @@ paper. A stricter prompt with examples still changed 30 of 40 questions in a spo
    `and`/`what about`. `they` and `their` are excluded because they usually mean the authors.
 3. A rewrite that names a paper the typed text does not name is rejected.
 
-With these changes the rewrite rate dropped to 0.012 and answer F1 rose to 0.293. LLM calls
+With these changes the rewrite rate dropped to 0.012 and answer F1 rose to 0.293 (0.290 in the final run below). LLM calls
 per turn went from 1.77 to 1.02.
 
 ## Limitations
