@@ -8,7 +8,7 @@ agent:
     history_turns: 3
   route:
     top_k: 10              # corpus chunks that vote on the paper
-    min_lead: 0.3          # top share - runner-up share needed to pick a paper without asking
+    min_lead: 0.2          # top share - runner-up share to pick a paper without asking (sweep: 0.2-0.4 plateau)
     title_match_min: 90    # full-title partial_ratio needed to count as naming a paper
   clarify:
     max_candidates: 3

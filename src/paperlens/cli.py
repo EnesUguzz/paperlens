@@ -224,6 +224,59 @@ def converse(
     typer.echo(text)
 
 
+@app.command("route-sweep")
+def route_sweep(
+    config: ConfigOpt = Path("experiments/configs/m2_agent.yaml"),
+    values: Annotated[
+        list[float] | None, typer.Option("--value", help="min_lead to try (repeatable).")
+    ] = None,
+    out: Annotated[Path | None, typer.Option("--out", help="Also write to this file")] = None,
+) -> None:
+    """Replay the agent's paper choice for many agent.route.min_lead values (no LLM)."""
+    from paperlens.evals.conversations import (
+        build_conversations,
+        load_conversations,
+        save_conversations,
+    )
+    from paperlens.evals.route_sweep import render_sweep, sweep
+    from paperlens.graph.routing import vote
+    from paperlens.index.embedder import build_embedder
+    from paperlens.index.store import build_or_load
+    from paperlens.ingestion.sources import load_dataset, sample_dataset
+
+    cfg = load_config(config)
+    loaded = load_dataset(cfg.data)
+    titles = {p.paper_id: p.title for p in loaded.papers}
+    path = cfg.conversations.path
+    if path.exists():
+        conversations = load_conversations(path)
+    else:  # same conversations the eval would build
+        sample, _ = sample_dataset(loaded, cfg.data.sample_size, cfg.data.seed)
+        conversations = build_conversations(sample, titles, cfg.conversations)
+        save_conversations(conversations, path)
+    bundle = build_or_load(cfg, loaded.papers, build_embedder(cfg.embedding))
+    try:
+        top_k = cfg.agent.route.top_k
+        votes = {
+            t.question_id: vote(bundle.dense.search(t.text, top_k))
+            for conversation in conversations
+            for t in conversation
+        }
+    finally:
+        bundle.dense.close()
+    grid = values or [round(0.1 * i, 1) for i in range(11)]
+    rows = sweep(
+        conversations, votes, titles, cfg.agent.route, cfg.agent.clarify.max_candidates, grid
+    )
+    table = render_sweep(rows)
+    if out:
+        out.parent.mkdir(parents=True, exist_ok=True)
+        out.write_text(
+            "# Routing sweep (agent.route.min_lead, no LLM)\n\n" + table, encoding="utf-8"
+        )
+    typer.echo(table)
+
+
 @app.command("check-gpu")
 def check_gpu() -> None:
     """Verify torch sees the GPU and can run fp16."""

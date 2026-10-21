@@ -16,6 +16,7 @@
 | `conversations.py` | M2: mixes the sample into deterministic multi-paper conversations (`evals/conversations/m2.jsonl`) |
 | `conversation_runner.py` | M2: plays the conversations through `corpus_rag` or the agent (a simulated user answers "which paper?"), one record per turn |
 | `routing_metrics.py` | M2: `route.*` metrics (paper accuracy per turn type, signaled-switch catch per template, clarify and wrong-paper rates) |
+| `route_sweep.py` | M2: replays the agent's paper choice for many `agent.route.min_lead` values without the LLM (`paperlens route-sweep`) |
 | `runner.py` | wires everything for one YAML config (`eval.system` picks single-paper vs conversations) |
 
 Metrics have no parameters on purpose: if the ruler changes, runs stop being comparable.

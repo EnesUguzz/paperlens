@@ -1,4 +1,4 @@
-# Run `m2_agent_lead02`
+# Run `m2_agent_lead03`
 
 ## Changed parameters vs `m1b_best`
 
@@ -9,7 +9,7 @@
 | `agent.condense.history_turns` | None | 3 |
 | `agent.condense.prompt_template` | None | prompts/condense.md |
 | `agent.condense.triggers` | None | ['\\bit\\b', '\\bits\\b', '\\bthem\\b', '\\bthat\\b', '\\bthose\\b', '\\bthere\\b', '\\bsame\\b', '\\b(former|latter)\\b', '^\\s*(and|what about|how about)\\b'] |
-| `agent.route.min_lead` | None | 0.2 |
+| `agent.route.min_lead` | None | 0.3 |
 | `agent.route.title_match_min` | None | 90.0 |
 | `agent.route.top_k` | None | 10 |
 | `agent.tracing` | None | True |
@@ -24,82 +24,82 @@
 
 | Metric | This run | Reference | Delta |
 |---|---|---|---|
-| answer_f1 | 0.304 | 0.440 | -0.136 |
-| answer_f1.abstractive | 0.198 | 0.247 | -0.050 |
-| answer_f1.extractive | 0.302 | 0.506 | -0.205 |
-| answer_f1.gold.abstractive | 0.248 | 0.325 | -0.077 |
-| answer_f1.gold.extractive | 0.292 | 0.503 | -0.211 |
-| answer_f1.gold.unanswerable | 0.416 | 0.440 | -0.024 |
+| answer_f1 | 0.290 | 0.440 | -0.151 |
+| answer_f1.abstractive | 0.190 | 0.247 | -0.058 |
+| answer_f1.extractive | 0.285 | 0.506 | -0.221 |
+| answer_f1.gold.abstractive | 0.244 | 0.325 | -0.081 |
+| answer_f1.gold.extractive | 0.274 | 0.503 | -0.229 |
+| answer_f1.gold.unanswerable | 0.388 | 0.440 | -0.052 |
 | answer_f1.gold.yes_no | 0.333 | 0.380 | -0.046 |
-| answer_f1.no_clarify | 0.294 | - | - |
-| answer_f1.turn.first | 0.397 | - | - |
-| answer_f1.turn.same | 0.271 | - | - |
+| answer_f1.no_clarify | 0.279 | - | - |
+| answer_f1.turn.first | 0.396 | - | - |
+| answer_f1.turn.same | 0.264 | - | - |
 | answer_f1.turn.switch_signaled | 0.391 | - | - |
-| answer_f1.turn.switch_unsignaled | 0.175 | - | - |
-| answer_f1.unanswerable | 0.538 | 0.500 | +0.038 |
+| answer_f1.turn.switch_unsignaled | 0.131 | - | - |
+| answer_f1.unanswerable | 0.520 | 0.500 | +0.020 |
 | answer_f1.yes_no | 0.308 | 0.412 | -0.104 |
-| answer_words_mean | 12.484 | 14.192 | -1.708 |
-| completion_tokens_mean | 47.620 | 49.788 | -2.168 |
+| answer_words_mean | 12.312 | 14.192 | -1.880 |
+| completion_tokens_mean | 47.188 | 49.788 | -2.600 |
 | condense.changed_rate | 0.012 | - | - |
-| context_words_mean | 708.316 | 689.316 | +19.000 |
+| context_words_mean | 706.364 | 689.316 | +17.048 |
 | data.questions_dropped | 0.000 | 0.000 | +0.000 |
 | data.unmatched_evidence_rate | 0.046 | 0.046 | +0.000 |
 | error_rate | 0.000 | 0.000 | +0.000 |
-| evidence_f1 | 0.294 | 0.491 | -0.197 |
-| evidence_f1.no_clarify | 0.283 | - | - |
-| evidence_f1_ceiling | 0.501 | 0.770 | -0.269 |
-| false_refusal_rate | 0.131 | 0.061 | +0.070 |
-| gold_recall | 0.344 | 0.507 | -0.162 |
+| evidence_f1 | 0.293 | 0.491 | -0.198 |
+| evidence_f1.no_clarify | 0.282 | - | - |
+| evidence_f1_ceiling | 0.503 | 0.770 | -0.267 |
+| false_refusal_rate | 0.155 | 0.061 | +0.094 |
+| gold_recall | 0.328 | 0.507 | -0.178 |
 | index.num_chunks | 8360.000 | 8360.000 | +0.000 |
-| latency_p50_ms | 1593.144 | 963.592 | +629.552 |
-| latency_p95_ms | 8748.405 | 1642.370 | +7106.035 |
+| latency_p50_ms | 1016.924 | 963.592 | +53.332 |
+| latency_p95_ms | 1749.370 | 1642.370 | +107.000 |
 | llm_calls_mean | 1.024 | - | - |
-| n.abstractive | 55.000 | 53.000 | +2.000 |
+| n.abstractive | 56.000 | 53.000 | +3.000 |
 | n.extractive | 143.000 | 142.000 | +1.000 |
 | n.gold.abstractive | 58.000 | 58.000 | +0.000 |
 | n.gold.extractive | 131.000 | 131.000 | +0.000 |
 | n.gold.unanswerable | 37.000 | 37.000 | +0.000 |
 | n.gold.yes_no | 24.000 | 24.000 | +0.000 |
-| n.no_clarify | 233.000 | - | - |
+| n.no_clarify | 231.000 | - | - |
 | n.turn.first | 57.000 | - | - |
 | n.turn.same | 54.000 | - | - |
 | n.turn.switch_signaled | 67.000 | - | - |
 | n.turn.switch_unsignaled | 72.000 | - | - |
-| n.unanswerable | 26.000 | 28.000 | -2.000 |
+| n.unanswerable | 25.000 | 28.000 | -3.000 |
 | n.yes_no | 26.000 | 27.000 | -1.000 |
 | n_questions | 250.000 | 250.000 | +0.000 |
-| prompt_tokens_max | 3059.000 | 2417.000 | +642.000 |
-| prompt_tokens_mean | 1832.524 | 1788.992 | +43.532 |
+| prompt_tokens_max | 3005.000 | 2417.000 | +588.000 |
+| prompt_tokens_mean | 1828.208 | 1788.992 | +39.216 |
 | query_error_rate | 0.000 | 0.000 | +0.000 |
-| refusal_recall | 0.351 | 0.351 | +0.000 |
+| refusal_recall | 0.324 | 0.351 | -0.027 |
 | retrieval.doc_hit_rate | 0.676 | 1.000 | -0.324 |
 | retrieval.mrr | 0.237 | 0.484 | -0.247 |
 | retrieval.n | 230.000 | 230.000 | +0.000 |
-| retrieval.ndcg_at_1 | 0.143 | 0.322 | -0.178 |
-| retrieval.ndcg_at_3 | 0.207 | 0.423 | -0.216 |
-| retrieval.ndcg_at_5 | 0.248 | 0.474 | -0.225 |
-| retrieval.recall_at_1 | 0.118 | 0.264 | -0.146 |
-| retrieval.recall_at_3 | 0.260 | 0.524 | -0.263 |
-| retrieval.recall_at_5 | 0.366 | 0.665 | -0.299 |
-| route.clarify_rate | 0.068 | - | - |
+| retrieval.ndcg_at_1 | 0.139 | 0.322 | -0.183 |
+| retrieval.ndcg_at_3 | 0.210 | 0.423 | -0.213 |
+| retrieval.ndcg_at_5 | 0.252 | 0.474 | -0.222 |
+| retrieval.recall_at_1 | 0.117 | 0.264 | -0.148 |
+| retrieval.recall_at_3 | 0.267 | 0.524 | -0.256 |
+| retrieval.recall_at_5 | 0.374 | 0.665 | -0.292 |
+| route.clarify_rate | 0.076 | - | - |
 | route.paper_accuracy | 0.676 | - | - |
-| route.paper_accuracy.first | 0.965 | - | - |
-| route.paper_accuracy.same | 0.611 | - | - |
+| route.paper_accuracy.first | 0.982 | - | - |
+| route.paper_accuracy.same | 0.630 | - | - |
 | route.paper_accuracy.switch_signaled | 1.000 | - | - |
-| route.paper_accuracy.switch_unsignaled | 0.194 | - | - |
+| route.paper_accuracy.switch_unsignaled | 0.167 | - | - |
 | route.signaled_catch | 1.000 | - | - |
 | route.signaled_catch.t0 | 1.000 | - | - |
 | route.signaled_catch.t1 | 1.000 | - | - |
 | route.signaled_catch.t2 | 1.000 | - | - |
-| route.unsignaled_catch | 0.194 | - | - |
-| route.wrong_paper_rate | 0.236 | - | - |
+| route.unsignaled_catch | 0.167 | - | - |
+| route.wrong_paper_rate | 0.220 | - | - |
 
 ## Biggest regressions
 
 - **Did they use a crowdsourcing platform for annotations?** (`0ba3ea93eef5660a79ea3c26c6a270eac32dfa4c`, answer_f1 1.00 -> 0.00)
   - gold: No | Unanswerable
-  - predicted: Yes
-  - top context: [Pilot Study] In addition to the reliability studies, we extrinsically evaluated the annotations in the task of summary evaluation. For each of the 58 peer summaries in TAC2008, we calculated a score as the sum of the importance estimates of the propositions it contains. Table TABREF13 shows how the
+  - predicted: a competition was set up on Codalab
+  - top context: [Participating Systems ::: Loud Whisper] Loud Whisper base their approach on BIBREF9 which is a graph-based sense clustering model. They process the data set to receive bigrams, create a co-occurence graph representation and after clustering assess the type of change per word by comparing the result
 
 - **Is WordNet useful for taxonomic reasoning for this task?** (`75ff6e425ce304a35f18c0230c0d13d3913a31a9`, answer_f1 1.00 -> 0.00)
   - gold: Unanswerable | Yes
@@ -108,7 +108,7 @@
 
 - **Are the automatically constructed datasets subject to quality control?** (`e97186c51d4af490dba6faaf833d269c8256426c`, answer_f1 1.00 -> 0.00)
   - gold: No | No
-  - predicted: synthetic datasets are vulnerable to systematic biases, which we carefully control for
+  - predicted: automatically generate datasets [...] is much harder to validate the quality of such data at such a scale and such varying levels of complexity
   - top context: [Discussion and Conclusion] The main appeal of using automatically generate datasets is the ability to systematically manipulate and control the complexity of target questions, which allows for more controlled experimentation and new forms of evaluation. Despite the positive results described above,
 
 - **What evaluations methods do they take?** (`71e4ba4e87e6596aeca187127c0d088df6570c57`, answer_f1 1.00 -> 0.00)

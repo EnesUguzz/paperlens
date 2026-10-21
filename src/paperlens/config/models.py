@@ -585,13 +585,15 @@ class RouteConfig(_Section):
         ),
     )
     min_lead: float = Field(
-        0.3,
+        0.2,
         ge=0.0,
         le=1.0,
         description=(
             "What: share of the top-voted paper minus the runner-up needed to pick it without "
-            "asking. Typical: 0.2-0.5. Effect: higher = fewer wrong-paper answers but more "
-            "clarifying questions (and fewer caught unsignaled switches)."
+            "asking (shares move in steps of 1/top_k, so 0.2 = two chunks ahead). Typical: "
+            "0.2-0.4 (a plateau in the M2 sweep, `paperlens route-sweep`). Effect: higher = "
+            "more clarifying questions and fewer caught unsignaled switches; lower (0.0-0.1) "
+            "= generic questions pull the agent off the active paper."
         ),
     )
     title_match_min: float = Field(

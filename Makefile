@@ -1,6 +1,6 @@
 CONFIG ?= experiments/configs/baseline.yaml
 
-.PHONY: setup test lint format download prepare-pdfs explain-config check-gpu index eval ablation models summarize notebook m1b m2 converse
+.PHONY: setup test lint format download prepare-pdfs explain-config check-gpu index eval ablation models summarize notebook m1b m2 converse route-sweep m2-sweep
 
 setup:
 	uv sync --extra ml
@@ -63,6 +63,15 @@ m2:  ## M2: corpus_rag floor and the LangGraph agent over the conversations, jud
 
 converse:  ## follow-up chats through the agent -> docs/m2_demo.md
 	uv run --extra ml paperlens converse --out docs/m2_demo.md
+
+route-sweep:  ## agent.route.min_lead 0.0-1.0 without the LLM (seconds) -> evals/results/route_sweep.md
+	uv run --extra ml paperlens route-sweep --out evals/results/route_sweep.md
+
+m2-sweep:  ## real LLM runs at min_lead 0.3 and 0.5 next to the 0.2 default (~25 min GPU)
+	for f in experiments/configs/m2/*.yaml; do uv run --extra ml paperlens eval --config $$f || exit 1; done
+	uv run paperlens judge --run m2_agent_lead03
+	uv run paperlens judge --run m2_agent_lead05
+	uv run paperlens summarize --out evals/results/SUMMARY.md
 
 summarize:
 	uv run paperlens summarize --out evals/results/SUMMARY.md

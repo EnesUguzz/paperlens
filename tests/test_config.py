@@ -94,7 +94,7 @@ def test_m2_defaults() -> None:
     cfg = AppConfig()
     assert cfg.eval.system == "single_paper"
     assert cfg.agent.route.top_k == 10
-    assert cfg.agent.route.min_lead == 0.3
+    assert cfg.agent.route.min_lead == 0.2
     assert cfg.agent.route.title_match_min == 90.0
     assert cfg.agent.clarify.max_candidates == 3
     assert cfg.agent.condense.enabled and cfg.agent.condense.history_turns == 3

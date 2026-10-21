@@ -1,0 +1,8 @@
+# min_lead sweep: same as m2_agent.yaml (0.2) except agent.route.min_lead.
+# Higher = fewer switches on an unclear vote; the pre-sweep default.
+extends: ../m2_agent.yaml
+agent:
+  route:
+    min_lead: 0.3
+eval:
+  run_name: m2_agent_lead03

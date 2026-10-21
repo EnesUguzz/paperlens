@@ -83,7 +83,7 @@
   ],
   "agent.condense.history_turns": 3,
   "agent.route.top_k": 10,
-  "agent.route.min_lead": 0.3,
+  "agent.route.min_lead": 0.2,
   "agent.route.title_match_min": 90.0,
   "agent.clarify.max_candidates": 3,
   "agent.tracing": true,
@@ -99,7 +99,7 @@
   "conversations.path": "evals/conversations/m2.jsonl",
   "meta.prompt_sha256": "b9e0dd367503dd55",
   "meta.data_sha256": "089781b91c337d34",
-  "meta.git_sha": "1421dd5",
+  "meta.git_sha": "2e5538b",
   "meta.git_dirty": "False",
   "meta.llm_digest": "4760c35aeb9d",
   "meta.server_version": "0.40.6"

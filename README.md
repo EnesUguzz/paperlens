@@ -182,28 +182,48 @@ Three systems are compared:
 |---|---|---|---|---|---|---|---|
 | m1b_best (paper given) | 0.440 | 0.491 | 0.568 | 1.000 | – | – | 1.6 s |
 | m2_corpus_rag | 0.216 | 0.181 | 0.248 | 0.456 | 0 % | 49.2 % | 1.9 s |
-| **m2_agent** | **0.290** | **0.293** | **0.344** | **0.676** | 7.6 % | **22.0 %** | 1.7 s |
+| **m2_agent** (`min_lead` 0.2) | **0.304** | **0.294** | **0.356** | **0.676** | 6.8 % | **23.6 %** | 1.7 s* |
 
-Agent vs corpus_rag: answer F1 **+0.074 [+0.036, +0.111]** and evidence F1
-**+0.112 [+0.068, +0.156]** (paired bootstrap, 95% CI). Agent vs the paper-given ceiling:
-−0.151 [−0.199, −0.103] answer F1.
+Agent vs corpus_rag: answer F1 **+0.088 [+0.052, +0.127]** and evidence F1
+**+0.113 [+0.070, +0.157]** (paired bootstrap, 95% CI). Agent vs the paper-given ceiling:
+−0.136 [−0.185, −0.085] answer F1.
+
+\* p95 latency comes from the identical-code 0.3 run. The 0.2 and 0.5 runs shared the GPU
+with another load for part of the run, so their latencies (p95 8.7 s and 11.2 s) are not
+comparable. Answers and routing are unaffected.
 
 | Turn type (n) | right paper: corpus_rag → agent | answer F1: corpus_rag → agent |
 |---|---|---|
-| first turn (57) | 0.60 → **0.98** | 0.20 → **0.40** |
-| same paper as before (54) | 0.26 → **0.63** | 0.24 → 0.26 |
+| first turn (57) | 0.60 → **0.96** | 0.20 → **0.40** |
+| same paper as before (54) | 0.26 → **0.61** | 0.24 → 0.27 |
 | switch, paper named (67) | 0.69 → **1.00** | 0.30 → **0.39** |
-| switch, paper not named (72) | **0.28** → 0.17 | 0.13 → 0.13 |
+| switch, paper not named (72) | **0.28** → 0.19 | 0.13 → **0.18** |
 
 - **Memory and naming carry the gain.** A named paper is always caught, for every template.
-  First turns resolve to the right paper 98% of the time, and only 19 of them needed a
+  First turns resolve to the right paper 96% of the time, and only 17 of them needed a
   clarifying question. On `same` turns, remembering the active paper more than doubles paper
   accuracy.
-- **Unsignaled switches are the designed weak spot.** With an active paper, an unclear
-  question means "same paper", as a person would assume, so 56 of the 72 silent switches stay
-  on the old paper. A missed switch also carries over: 14 of the 54 `same` turns stay on a
-  paper chosen wrongly earlier.
-- **Asking is not what wins.** Without the 19 clarified turns, answer F1 is still 0.279.
+- **Unsignaled switches are the main failure.** With an active paper, an unclear question
+  means "same paper", as a person would assume, so only 19% of the 72 silent switches are
+  caught. A missed switch also carries over: 13 of the 54 `same` turns stay on a paper chosen
+  wrongly earlier.
+- **Asking is not what wins.** Without the 17 clarified turns, answer F1 is still 0.294. In
+  this eval the simulated user always answers "which paper?" correctly, so clarifying costs
+  nothing here. It would cost a real user's patience.
+
+**Choosing the switch threshold.** `agent.route.min_lead` was tuned on validation with a
+routing-only sweep (`paperlens route-sweep`, no LLM, seconds). Paper accuracy is flat between
+0.2 and 0.4 (0.67–0.68). Higher values mainly ask more and miss more unannounced switches; at
+0.8 paper accuracy is 0.644 and only 7% of silent switches are caught. The default is 0.2, the
+low end of that plateau. Answer-F1 among 0.2 / 0.3 / 0.5 (0.304 / 0.290 / 0.292) differs by
+about as much as two runs with identical routing, so it did not decide the choice. Full
+table: [`evals/results/route_sweep.md`](evals/results/route_sweep.md).
+
+| min_lead | 0.0 | 0.1 | **0.2** | 0.3 | 0.4 | 0.5 | 0.6 | 0.8 | 1.0 |
+|---|---|---|---|---|---|---|---|---|---|
+| right paper | 0.564 | 0.632 | **0.676** | 0.676 | 0.672 | 0.664 | 0.652 | 0.644 | 0.632 |
+| asked "which?" | 0 % | 4.4 % | **6.8 %** | 7.6 % | 8.4 % | 8.4 % | 8.8 % | 9.2 % | 9.2 % |
+| silent switch caught | 0.29 | 0.21 | **0.19** | 0.17 | 0.14 | 0.13 | 0.10 | 0.07 | 0.06 |
 - **condense needed a hard gate.** Asked to leave standalone questions alone, ministral-3:14b
   still rewrote 74% of them. It often appended the previous paper's title, which hid every
   switch.
@@ -211,7 +231,7 @@ Agent vs corpus_rag: answer F1 **+0.074 [+0.036, +0.111]** and evidence F1
   - **Fix:** condense only runs when the message has a referring word (`agent.condense.triggers`).
   - **Fix:** a rewrite that adds a paper title is rejected.
   - With these, the rewrite rate on QASPER questions is 1.2%, and answer F1 went from 0.266
-    to 0.290.
+    to 0.290 (at `min_lead` 0.3, before the sweep).
   - Follow-ups such as "and how big is it?" are shown in [`docs/m2_demo.md`](docs/m2_demo.md)
     (`make converse`).
 - **Every conversation is an MLflow trace,** with one span per node: `uv run mlflow ui
