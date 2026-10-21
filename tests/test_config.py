@@ -88,3 +88,26 @@ def test_m1b_configs_load_and_name_their_run(path: Path) -> None:
 def test_semantic_min_words_must_be_below_chunk_size() -> None:
     with pytest.raises(ValidationError):
         ChunkingConfig(strategy="semantic", chunk_size=50, semantic_min_words=50)
+
+
+def test_m2_defaults() -> None:
+    cfg = AppConfig()
+    assert cfg.eval.system == "single_paper"
+    assert cfg.agent.route.top_k == 10
+    assert cfg.agent.route.min_lead == 0.3
+    assert cfg.agent.route.title_match_min == 90.0
+    assert cfg.agent.clarify.max_candidates == 3
+    assert cfg.agent.condense.enabled and cfg.agent.condense.history_turns == 3
+    assert cfg.agent.tracing
+    conv = cfg.conversations
+    assert (conv.papers_per_conversation, conv.return_prob, conv.signal_prob, conv.seed) == (
+        3,
+        0.5,
+        0.5,
+        13,
+    )
+    assert conv.signal_templates == [
+        'In the paper "{title}", {question}',
+        "In {short_title}, {question}",
+        "About the {short_title} paper: {question}",
+    ]

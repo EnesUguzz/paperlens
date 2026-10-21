@@ -525,8 +525,157 @@ class JudgeConfig(_Section):
     )
 
 
+class CondenseConfig(_Section):
+    enabled: bool = Field(
+        True,
+        description=(
+            "What: rewrite a follow-up into a standalone question using the chat history "
+            "before routing and retrieval (M2 agent). Effect: off = every turn is searched as "
+            "typed, so 'and how big is it?' finds nothing; on = one extra LLM call per turn "
+            "after the first."
+        ),
+    )
+    prompt_template: Path = Field(
+        Path("prompts/condense.md"),
+        description=(
+            "What: condense prompt with {{history}} and {{question}} placeholders. "
+            "Effect: wording decides how often standalone questions get rewritten anyway "
+            "(condense.changed_rate in the report)."
+        ),
+    )
+    history_turns: int = Field(
+        3,
+        ge=1,
+        description=(
+            "What: how many previous turns (question + answer) the condense prompt sees. "
+            "Typical: 2-5. Effect: more = resolves older references but longer prompts and "
+            "more chances to drag in the wrong topic."
+        ),
+    )
+
+
+class RouteConfig(_Section):
+    top_k: int = Field(
+        10,
+        ge=1,
+        description=(
+            "What: chunks retrieved over the whole corpus to vote on which paper a question "
+            "is about. Typical: 5-20. Effect: more = smoother paper shares, but generic "
+            "questions spread over more papers."
+        ),
+    )
+    min_lead: float = Field(
+        0.3,
+        ge=0.0,
+        le=1.0,
+        description=(
+            "What: share of the top-voted paper minus the runner-up needed to pick it without "
+            "asking. Typical: 0.2-0.5. Effect: higher = fewer wrong-paper answers but more "
+            "clarifying questions (and fewer caught unsignaled switches)."
+        ),
+    )
+    title_match_min: float = Field(
+        90.0,
+        ge=0.0,
+        le=100.0,
+        description=(
+            "What: rapidfuzz partial_ratio needed to say a question names a paper (full or "
+            "short title). Typical: 85-95. Effect: lower = catches sloppier mentions but may "
+            "switch on a title word used in passing."
+        ),
+    )
+
+
+class ClarifyConfig(_Section):
+    max_candidates: int = Field(
+        3,
+        ge=1,
+        description=(
+            "What: candidate paper titles listed when the agent asks 'which paper?'. "
+            "Typical: 2-5. Effect: none on scores with the simulated user; for a real user "
+            "more = longer question, fewer misses."
+        ),
+    )
+
+
+class AgentConfig(_Section):
+    condense: CondenseConfig = Field(default_factory=CondenseConfig)
+    route: RouteConfig = Field(default_factory=RouteConfig)
+    clarify: ClarifyConfig = Field(default_factory=ClarifyConfig)
+    tracing: bool = Field(
+        True,
+        description=(
+            "What: record every agent conversation as an MLflow trace (one span per graph "
+            "node). Effect: none on scores; a little slower, and traces appear in `mlflow ui`."
+        ),
+    )
+
+
+class ConversationsConfig(_Section):
+    papers_per_conversation: int = Field(
+        3,
+        ge=1,
+        description=(
+            "What: papers mixed into one synthetic conversation. Typical: 2-4. Effect: more = "
+            "more paper switches per conversation, harder routing."
+        ),
+    )
+    return_prob: float = Field(
+        0.5,
+        ge=0.0,
+        le=1.0,
+        description=(
+            "What: chance that a paper with 2+ questions has its last question moved after a "
+            "later paper (a return to an earlier paper). Typical: 0.3-0.7. Effect: more "
+            "returns = more switches to a paper the agent saw before."
+        ),
+    )
+    signal_prob: float = Field(
+        0.5,
+        ge=0.0,
+        le=1.0,
+        description=(
+            "What: chance that a first or switching turn names its paper (via a signal "
+            "template). Typical: 0.3-0.7. Effect: higher = easier routing; the rest are "
+            "unsignaled switches."
+        ),
+    )
+    seed: int = Field(
+        13,
+        description=(
+            "What: seed for building conversations. Typical: any fixed integer. Effect: a "
+            "different seed gives different conversations; keep it fixed to compare runs."
+        ),
+    )
+    signal_templates: list[str] = Field(
+        default_factory=lambda: [
+            'In the paper "{title}", {question}',
+            "In {short_title}, {question}",
+            "About the {short_title} paper: {question}",
+        ],
+        description=(
+            "What: how a turn names its paper; {title}, {short_title} (title before ':' or "
+            "first 4 words) and {question}. Effect: full titles are easy to catch, short ones "
+            "test real name matching (route.signaled_catch.t<i> per template)."
+        ),
+    )
+    path: Path = Field(
+        Path("evals/conversations/m2.jsonl"),
+        description="What: where the built conversations are written. Effect: none.",
+    )
+
+
 class EvalConfig(_Section):
     experiment_name: str = Field("m1a", description="What: MLflow experiment name. Effect: none.")
+    system: Literal["single_paper", "corpus_rag", "agent"] = Field(
+        "single_paper",
+        description=(
+            "What: what is evaluated. 'single_paper' = each question with its paper (M1); "
+            "'corpus_rag' = conversations, every turn searched over all papers with no "
+            "history; 'agent' = conversations through the M2 LangGraph agent. Effect: the "
+            "two conversation systems add route.* metrics and need no gold paper."
+        ),
+    )
     run_name: str = Field(
         "baseline",
         description=(
@@ -584,6 +733,8 @@ class AppConfig(BaseSettings):
     generation: GenerationConfig = Field(default_factory=GenerationConfig)
     eval: EvalConfig = Field(default_factory=EvalConfig)
     judge: JudgeConfig = Field(default_factory=JudgeConfig)
+    agent: AgentConfig = Field(default_factory=AgentConfig)
+    conversations: ConversationsConfig = Field(default_factory=ConversationsConfig)
 
     @model_validator(mode="after")
     def _chunks_fit_embedder(self) -> AppConfig:
