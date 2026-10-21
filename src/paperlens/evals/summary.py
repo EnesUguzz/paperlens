@@ -37,10 +37,11 @@ HEADLINE_METRICS = (
 def _delta(run: RunResult, reference: RunResult | None) -> str:
     if reference is None or run.run_name == reference.run_name:
         return "-"
-    result = paired_bootstrap(
-        {r.question_id: r.answer_f1 for r in run.records},
-        {r.question_id: r.answer_f1 for r in reference.records},
-    )
+    ours = {r.question_id: r.answer_f1 for r in run.records}
+    theirs = {r.question_id: r.answer_f1 for r in reference.records}
+    if not set(ours) & set(theirs):  # e.g. a test-split run next to validation runs
+        return "-"
+    result = paired_bootstrap(ours, theirs)
     return f"{result.mean_diff:+.3f} [{result.low:+.3f}, {result.high:+.3f}]"
 
 

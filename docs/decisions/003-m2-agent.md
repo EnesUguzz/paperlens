@@ -1,6 +1,6 @@
 # 003: M2 conversational agent
 
-Date: 2026-10-22 · Status: accepted (validation split; test split not run yet)
+Date: 2026-10-22 · Status: accepted (tuned on validation; final test-split run done)
 Design: `docs/superpowers/specs/2026-10-21-m2-conversational-agent-design.md`
 
 ## Context
@@ -121,6 +121,44 @@ Agent decisions per turn type:
 | `switch_signaled` | named 67 |
 | `switch_unsignaled` | stay 50 (1 / 49), vote 22 (13 / 9) |
 
+## Final test-split run (once, settings frozen)
+
+`experiments/configs/test/`: 416 papers, 12,142 chunks, 250 questions (seed 13), 65 conversations.
+
+| System | answer F1 | evidence F1 | judge | right paper | clarify | p95 |
+|---|---|---|---|---|---|---|
+| test m1b_best | 0.458 | 0.530 | 0.564 | 1.000 | – | 1.9 s |
+| test m2_corpus_rag | 0.245 | 0.203 | 0.288 | 0.472 | 0.000 | 2.0 s |
+| test m2_agent | 0.363 | 0.395 | 0.436 | 0.748 | 0.104 | 2.0 s |
+
+Agent vs the other two systems on test:
+
+| Comparison | answer F1 | evidence F1 |
+|---|---|---|
+| agent − corpus_rag | +0.117 [+0.071, +0.169] | +0.192 [+0.136, +0.250] |
+| agent − m1b_best | −0.095 [−0.144, −0.044] | −0.135 [−0.184, −0.084] |
+
+Paper accuracy by turn type (corpus_rag → agent):
+
+| Turn type | n | corpus_rag | agent |
+|---|---|---|---|
+| `first` | 65 | 0.48 | 0.97 |
+| `same` | 40 | 0.35 | 0.83 |
+| `switch_signaled` | 83 | 0.75 | 0.99 |
+| `switch_unsignaled` | 62 | 0.18 | 0.15 |
+
+**The validation picture holds on unseen papers:**
+- Every system scores at least as well on test, and the agent's margin over corpus_rag is
+  wider.
+- Silent switches remain the weak spot.
+- The turn mix differs from validation (fewer `same` turns), so the absolute numbers are not
+  directly comparable across splits.
+
+**The one missed named switch used the short name "Reducing Gender Bias in".** That is the
+first 4 words of two test titles: "...in Abusive Language Detection" and "...in Neural
+Machine Translation as a Domain Adaptation Problem". The tie returned no match and the agent
+stayed on the active paper. That is the intended behaviour for an ambiguous name.
+
 ## What changed after the first run
 
 The first agent run (`min_lead` 0.3) scored answer F1 0.266. Two problems showed up:
@@ -162,12 +200,9 @@ paper for 5 of 500 replayed texts and did not change the routing metrics.
 - **false_refusal_rate is 0.131 (m1b_best: 0.061).** On the wrong paper the model mostly
   refuses, which is the right behaviour, but it is counted as a false refusal against the
   gold answer.
-- **Validation only.** The final test-split run waits for the user's go-ahead (see the spec,
-  section 8).
 
 ## Follow-ups
 
 - Add a harder signal template (a paraphrased or abbreviated name).
 - Detect silent switches with something other than the vote. For example, a low similarity
   between the question and the active paper's best chunk.
-- Run the test split with `min_lead` 0.2 frozen.

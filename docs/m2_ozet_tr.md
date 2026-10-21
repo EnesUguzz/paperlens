@@ -75,6 +75,27 @@ taşıyor; 0.2 "birinci makale ikinciden en az 2 chunk önde" demek.
   koşuların gecikme ölçümleri geçersiz; gecikme aynı kodla temiz koşan 0.3 koşusundan
   raporlandı. Cevaplar ve makale seçimi bundan etkilenmedi.
 
+## Test seti: tek seferlik final koşu
+
+Bütün ayarlar validation'da seçildi. Sonra ayarlar dondurulup QASPER'ın hiç bakmadığımız
+**test** bölümünde tek bir koşu yapıldı: 416 makale, 250 soru, 65 sohbet.
+
+| Sistem | answer F1 (val → **test**) | evidence F1 (val → **test**) | doğru makale (val → **test**) |
+|---|---|---|---|
+| m1b_best (makale verili) | 0.440 → **0.458** | 0.491 → **0.530** | 1.00 → **1.00** |
+| m2_corpus_rag | 0.216 → **0.245** | 0.181 → **0.203** | 0.46 → **0.47** |
+| **m2_agent** | 0.304 → **0.363** | 0.294 → **0.395** | 0.68 → **0.75** |
+
+- **Validation'daki seçimler yeni makalelerde de geçerli.** Agent'ın tabana farkı test'te
+  daha da büyük: answer F1 +0.117 [+0.071, +0.169]. Tavana uzaklığı −0.095.
+- **Test'te tur dağılımı farklı:** daha az "aynı makale" turu, daha çok ilk ve sinyalli tur.
+  Bu yüzden mutlak sayıları "test daha kolay" diye okumamak gerekiyor.
+- **Zayıf yan aynı:** adı geçmeyen geçişlerin sadece %14.5'i yakalanıyor.
+- **Adı geçen 83 geçişten 1'i kaçtı.** Kısa ad olarak "Reducing Gender Bias in" kullanılmıştı;
+  bu, iki test makalesinin başlığının ilk 4 kelimesiyle aynı. Ad belirsiz olduğu için agent
+  tahmin etmek yerine aktif makalede kaldı.
+- **Gecikme temiz ölçüldü:** p95 2.0 s.
+
 ## Yol üstünde bulduğumuz hata
 
 İlk koşuda answer F1 0.266'ydı. Sebebi: 14B model, "değiştirme" demesine rağmen standalone
@@ -106,4 +127,5 @@ Koşmak için: `make m2`. Demo için: `make converse`. Tarama için: `make route
 - Daha zor bir makale-adı şablonu eklenecek (kısaltma ya da başka sözcüklerle anma).
 - Adsız geçişleri yakalamak için oylamadan başka bir sinyal denenebilir (örneğin sorunun aktif
   makaleye ne kadar benzediği).
-- `min_lead` 0.2 ile dondurulup test setinde tek koşu yapılacak (senin onayınla).
+- Kısa ad belirsizse (iki makale aynı ilk 4 kelimeyle başlıyorsa) agent'ın adayları listeleyip
+  sorması denenebilir.

@@ -1,0 +1,9 @@
+# Final test-split run (run once, after every setting was frozen on validation).
+# Same config as m1b_best.yaml (gold paper given: the ceiling); only the split and names change.
+extends: ../m1b_best.yaml
+data:
+  split: test
+eval:
+  experiment_name: test_final
+  run_name: test_m1b_best
+  reference_run: null

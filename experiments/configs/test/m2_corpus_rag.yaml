@@ -1,0 +1,12 @@
+# Final test-split run (run once, after every setting was frozen on validation).
+# Same config as m2_corpus_rag.yaml (stateless corpus search: the floor); only the split,
+# the conversations file and the names change.
+extends: ../m2_corpus_rag.yaml
+data:
+  split: test
+conversations:
+  path: evals/conversations/m2_test.jsonl
+eval:
+  experiment_name: test_final
+  run_name: test_m2_corpus_rag
+  reference_run: test_m1b_best

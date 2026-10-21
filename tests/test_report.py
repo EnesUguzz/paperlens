@@ -78,3 +78,19 @@ def test_summary_table_shows_varying_params(tmp_path: Path) -> None:
     table = summarize(tmp_path)
     assert "retrieval.top_k" in table and "llm.context_window" not in table
     assert "| topk10 | 10 |" in table
+
+
+def test_summary_skips_delta_for_runs_on_other_questions(tmp_path: Path) -> None:
+    # a test-split run shares no question with the validation baseline: no delta, no crash
+    other = RunResult(
+        run_name="test_run",
+        params={"retrieval.top_k": 5},
+        metrics={"answer_f1": 0.5},
+        records=[rec("t1", 1.0)],
+    )
+    save_run(BASE, tmp_path / "baseline")
+    save_run(other, tmp_path / "test_run")
+    table = summarize(tmp_path)
+    assert next(line for line in table.splitlines() if line.startswith("| test_run")).endswith(
+        "| - |"
+    )

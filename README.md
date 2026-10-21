@@ -237,6 +237,32 @@ table: [`evals/results/route_sweep.md`](evals/results/route_sweep.md).
 - **Every conversation is an MLflow trace,** with one span per node: `uv run mlflow ui
   --backend-store-uri sqlite:///mlflow.db`, experiment `m2`, then Traces.
 
+### Final test-split run
+
+Every setting above was chosen on validation. The QASPER **test** split was then run once,
+with all settings frozen (`experiments/configs/test/`). The test split has 416 papers and
+12,142 chunks. The sample is again 250 questions, seed 13, in 65 conversations.
+
+| System | answer F1 (val → **test**) | evidence F1 (val → **test**) | judge acc. (val → **test**) | right paper (val → **test**) |
+|---|---|---|---|---|
+| m1b_best (paper given) | 0.440 → **0.458** | 0.491 → **0.530** | 0.568 → **0.564** | 1.000 → **1.000** |
+| m2_corpus_rag | 0.216 → **0.245** | 0.181 → **0.203** | 0.248 → **0.288** | 0.456 → **0.472** |
+| m2_agent | 0.304 → **0.363** | 0.294 → **0.395** | 0.356 → **0.436** | 0.676 → **0.748** |
+
+On test the agent beats corpus_rag by **+0.117 [+0.071, +0.169]** answer F1 and
+**+0.192 [+0.136, +0.250]** evidence F1. It is **−0.095 [−0.144, −0.044]** below the
+paper-given ceiling. p95 latency is 2.0 s for the agent and 1.9 s for m1b_best, measured on
+a GPU that nothing else was using.
+
+- **The validation choices hold on unseen papers.** Every system scores at least as well on
+  test, and the agent's lead over the floor is larger. Test has a different mix of turns (40
+  `same` turns vs 54, more first and signaled turns), so the absolute numbers are not a sign
+  that test is harder or easier in general.
+- **The same weakness shows up.** Only 14.5% of silent switches are caught.
+- **One named switch was missed (82 of 83 caught).** It used the short name "Reducing Gender
+  Bias in", the first 4 words of the title, which two test papers share. That name is
+  ambiguous, so the agent stayed on the active paper instead of guessing.
+
 ### Reproducibility
 
 Each run folder stores its config (`params.json`, including `meta.*`: prompt and data
