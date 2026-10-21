@@ -26,6 +26,7 @@ from paperlens.domain import (
     Question,
     ScoredChunk,
     Segment,
+    Usage,
 )
 from paperlens.llm.client import LLMClient, LLMError
 from paperlens.llm.structured import StructuredOutputError, structured_call
@@ -97,6 +98,7 @@ class BaselinePipeline:
         titles: Mapping[str, str],
         transformer: QueryTransformer | None = None,
         cite_unit: Literal["chunk", "paragraph"] = "chunk",
+        scope: Literal["paper", "corpus"] = "paper",
     ) -> None:
         missing = [p for p in PLACEHOLDERS if p not in template]
         if missing:
@@ -107,12 +109,20 @@ class BaselinePipeline:
         self._titles = titles
         self._transformer = transformer or IdentityTransformer()
         self._cite_unit = cite_unit
+        # 'corpus' (M2 corpus_rag) never reads question.paper_id: it searches every paper
+        # and shows the title of the top chunk's paper, so the gold paper cannot leak.
+        self._scope = scope
+
+    def _title(self, question: Question, retrieved: Sequence[ScoredChunk] = ()) -> str:
+        if self._scope == "paper":
+            return self._titles.get(question.paper_id, "")
+        return self._titles.get(retrieved[0].chunk.paper_id, "") if retrieved else ""
 
     def build_prompt(self, question: Question, retrieved: Sequence[ScoredChunk]) -> str:
         """The exact text sent to the LLM (also shown by `paperlens trace`)."""
         return render_prompt(
             self._template,
-            title=self._titles.get(question.paper_id, ""),
+            title=self._title(question, retrieved),
             context=self._context(retrieved)[0],
             question=question.question,
         )
@@ -125,43 +135,64 @@ class BaselinePipeline:
             return format_paragraph_context(retrieved)
         return format_context(retrieved), []
 
-    def plan(self, question: Question) -> QueryPlan:
+    def plan(self, question: Question, text: str | None = None) -> QueryPlan:
         """The texts to search with (the question itself unless a transformer is set)."""
-        title = self._titles.get(question.paper_id, "")
-        return self._transformer.plan(question.question, title)
+        return self._transformer.plan(text or question.question, self._title(question))
 
-    def retrieve(self, question: Question, plan: QueryPlan) -> list[ScoredChunk]:
-        return self._retriever.retrieve(question.question, paper_id=question.paper_id, plan=plan)
+    def retrieve(
+        self, question: Question, plan: QueryPlan, text: str | None = None
+    ) -> list[ScoredChunk]:
+        paper_id = question.paper_id if self._scope == "paper" else None
+        return self._retriever.retrieve(text or question.question, paper_id=paper_id, plan=plan)
 
-    def run(self, question: Question, plan: QueryPlan | None = None) -> PipelineResult:
-        """Answer one question; pass a `plan` you already made to avoid a second transform call."""
-        plan = self.plan(question) if plan is None else plan
+    def run(
+        self, question: Question, plan: QueryPlan | None = None, text: str | None = None
+    ) -> PipelineResult:
+        """Answer one question; pass a `plan` you already made to avoid a second transform call.
+
+        `text` is what the user typed when it differs from the dataset question (M2 turns)."""
+        text = text or question.question
+        plan = self.plan(question, text) if plan is None else plan
         # The timer starts after planning: the transform's latency is already in plan.usage
         # (and so in answer.usage), and EvalRecord adds both, so it must be counted once.
         started = time.perf_counter()
-        retrieved = self.retrieve(question, plan)
+        retrieved = self.retrieve(question, plan, text)
         retrieval_ms = (time.perf_counter() - started) * 1000
-        context, numbered = self._context(retrieved)
-        prompt = render_prompt(
-            self._template, self._titles.get(question.paper_id, ""), context, question.question
+        answer = self.generate(
+            question, text, self._title(question, retrieved), retrieved, plan.usage
         )
+        return PipelineResult(
+            answer=answer,
+            retrieved=retrieved,
+            retrieval_ms=retrieval_ms,
+            query_error=plan.error,
+        )
+
+    def generate(
+        self,
+        question: Question,
+        text: str,
+        title: str,
+        retrieved: Sequence[ScoredChunk],
+        usage: Usage | None = None,
+    ) -> Answer:
+        """One structured LLM call over already retrieved chunks (also the M2 agent's last step).
+
+        `usage` is what earlier steps of this turn cost; it is added to the answer's usage."""
+        before = usage or Usage()
+        context, numbered = self._context(retrieved)
+        prompt = render_prompt(self._template, title, context, text)
         messages = [{"role": "user", "content": prompt}]
         try:
-            draft, usage = structured_call(self._llm, messages, AnswerDraft)
+            draft, call_usage = structured_call(self._llm, messages, AnswerDraft)
         except (LLMError, StructuredOutputError) as err:
-            failed = Answer(
+            return Answer(
                 question_id=question.question_id,
                 answer_type="unanswerable",
                 text=UNANSWERABLE_TEXT,
                 refused=True,
                 error=f"{type(err).__name__}: {err}",
-                usage=plan.usage,
-            )
-            return PipelineResult(
-                answer=failed,
-                retrieved=retrieved,
-                retrieval_ms=retrieval_ms,
-                query_error=plan.error,
+                usage=before,
             )
 
         refused = draft.answer_type == "unanswerable"
@@ -174,18 +205,12 @@ class BaselinePipeline:
             cited = [retrieved[i - 1] for i in picks if 1 <= i <= len(retrieved)]
             citations = [sc.chunk.chunk_id for sc in cited]
             evidence_ids = list(dict.fromkeys(p for sc in cited for p in sc.chunk.paragraph_ids))
-        answer = Answer(
+        return Answer(
             question_id=question.question_id,
             answer_type=draft.answer_type,
             text=UNANSWERABLE_TEXT if refused else draft.answer.strip(),
             citations=citations,
             evidence_ids=evidence_ids,
             refused=refused,
-            usage=plan.usage + usage,
-        )
-        return PipelineResult(
-            answer=answer,
-            retrieved=retrieved,
-            retrieval_ms=retrieval_ms,
-            query_error=plan.error,
+            usage=before + call_usage,
         )

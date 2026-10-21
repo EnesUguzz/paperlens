@@ -155,3 +155,38 @@ def test_paragraph_mode_cites_exact_paragraphs() -> None:
     assert answer.evidence_ids == ["P::b"]
     assert answer.citations == ["P::c0"]
     assert "[3] text of P::c" in llm.calls[0][0][0]["content"]
+
+
+class RecordingRetriever(StubRetriever):
+    def __init__(self, result: list[ScoredChunk]) -> None:
+        super().__init__(result)
+        self.paper_ids: list[str | None] = []
+
+    def retrieve(
+        self, query: str, paper_id: str | None = None, plan: QueryPlan | None = None
+    ) -> list[ScoredChunk]:
+        self.paper_ids.append(paper_id)
+        return super().retrieve(query, paper_id, plan)
+
+
+def test_corpus_scope_no_gold_leak() -> None:
+    other = Chunk(
+        chunk_id="O::c0", paper_id="O", section="Data", text="We use SQuAD", paragraph_ids=[]
+    )
+    retriever = RecordingRetriever([ScoredChunk(chunk=other, score=0.9)])
+    llm = FakeLLM(['{"answer_type": "extractive", "answer": "SQuAD", "evidence": [1]}'])
+    titles = {"P": "Gold Title", "O": "Other Title"}
+    pipe = BaselinePipeline(retriever, llm, TEMPLATE, titles, scope="corpus")
+    pipe.run(QUESTION, text='In "Other Title", which dataset?')
+    assert retriever.paper_ids == [None]
+    prompt = llm.calls[0][0][0]["content"]
+    assert "Other Title" in prompt and "Gold Title" not in prompt
+    assert 'In "Other Title", which dataset?' in prompt
+
+
+def test_generate_matches_run() -> None:
+    reply = '{"answer_type": "extractive", "answer": "SQuAD", "evidence": [2]}'
+    _, result = run(reply)
+    pipe = BaselinePipeline(StubRetriever(CHUNKS), FakeLLM([reply]), TEMPLATE, {"P": "Tiny Paper"})
+    answer = pipe.generate(QUESTION, QUESTION.question, "Tiny Paper", CHUNKS)
+    assert answer == result.answer
