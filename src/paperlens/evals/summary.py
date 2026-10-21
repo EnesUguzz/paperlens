@@ -28,6 +28,8 @@ HEADLINE_METRICS = (
     "false_refusal_rate",
     "error_rate",
     "judge.accuracy",
+    "route.paper_accuracy",
+    "route.clarify_rate",
     "latency_p95_ms",
 )
 

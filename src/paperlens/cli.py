@@ -192,6 +192,38 @@ def trace(
     typer.echo(text)
 
 
+@app.command()
+def converse(
+    config: ConfigOpt = Path("experiments/configs/m2_agent.yaml"),
+    file: Annotated[Path, typer.Option("--file", help="Demo chats (JSONL).")] = Path(
+        "evals/conversations/followups_demo.jsonl"
+    ),
+    out: Annotated[Path | None, typer.Option("--out", help="Also write to this file")] = None,
+) -> None:
+    """Run hand-written follow-up chats through the M2 agent and print a transcript."""
+    from paperlens.graph.build import build_agent_deps, build_graph, make_checkpointer
+    from paperlens.graph.converse import converse as run_converse
+    from paperlens.graph.converse import load_demo
+    from paperlens.index.embedder import build_embedder
+    from paperlens.index.store import build_or_load
+    from paperlens.ingestion.sources import load_dataset
+    from paperlens.llm.client import OpenAICompatClient
+
+    cfg = load_config(config)
+    papers = load_dataset(cfg.data).papers
+    titles = {p.paper_id: p.title for p in papers}
+    bundle = build_or_load(cfg, papers, build_embedder(cfg.embedding))
+    try:
+        deps = build_agent_deps(cfg, bundle, OpenAICompatClient(cfg.llm), titles)
+        text = run_converse(build_graph(deps, make_checkpointer()), load_demo(file), titles)
+    finally:
+        bundle.dense.close()
+    if out:
+        out.parent.mkdir(parents=True, exist_ok=True)
+        out.write_text(text, encoding="utf-8")
+    typer.echo(text)
+
+
 @app.command("check-gpu")
 def check_gpu() -> None:
     """Verify torch sees the GPU and can run fp16."""

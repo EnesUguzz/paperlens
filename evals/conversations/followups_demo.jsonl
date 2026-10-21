@@ -1,0 +1,25 @@
+{"conversation_id": "d01", "text": "In TWEETQA, what is the size of this dataset?"}
+{"conversation_id": "d01", "text": "And which evaluation metrics do they use on it?"}
+{"conversation_id": "d02", "text": "About the Macaw paper: what functionality does it provide?"}
+{"conversation_id": "d02", "text": "What interface does it currently have?"}
+{"conversation_id": "d02", "text": "Does the paper show any case studies with it?"}
+{"conversation_id": "d03", "text": "What baseline is used in the experiments of the LiLi continuous knowledge learning chatbot?"}
+{"conversation_id": "d03", "text": "How much better than that baseline is LiLi?"}
+{"conversation_id": "d04", "text": "Which datasets are used to evaluate message passing attention networks for document understanding?"}
+{"conversation_id": "d04", "text": "Which component has the greatest impact on performance there?"}
+{"conversation_id": "d04", "text": "And the least impactful one?"}
+{"conversation_id": "d05", "text": "In the paper \"Arabic Offensive Language on Twitter: Analysis and Experiments\", how many tweets are in the dataset?"}
+{"conversation_id": "d05", "text": "How many annotators tagged each of them?"}
+{"conversation_id": "d06", "text": "Which datasets did they experiment with?", "reply": "External Lexical Information for Multilingual Part-of-Speech Tagging"}
+{"conversation_id": "d06", "text": "Which languages are explored there?"}
+{"conversation_id": "d07", "text": "In VAIS ASR, what deep learning architectures are used?"}
+{"conversation_id": "d07", "text": "Is that model tested against any baseline?"}
+{"conversation_id": "d07", "text": "What language model combination technique do they use?"}
+{"conversation_id": "d08", "text": "About the TWEETQA paper: how do they determine if tweets have been used by journalists?"}
+{"conversation_id": "d08", "text": "In Macaw, what interface does the platform have?"}
+{"conversation_id": "d08", "text": "And what is a wizard of oz setup in it?"}
+{"conversation_id": "d09", "text": "What corpus is used to learn user behaviour in neural user simulation for spoken dialogue policy optimisation?"}
+{"conversation_id": "d09", "text": "By how much did NUS outperform ABUS?"}
+{"conversation_id": "d10", "text": "Which Facebook pages did they look at for distant supervision of emotion detection?"}
+{"conversation_id": "d10", "text": "What was their performance on it?"}
+{"conversation_id": "d10", "text": "Which existing benchmarks did they compare to?"}

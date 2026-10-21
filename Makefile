@@ -1,6 +1,6 @@
 CONFIG ?= experiments/configs/baseline.yaml
 
-.PHONY: setup test lint format download prepare-pdfs explain-config check-gpu index eval ablation models summarize notebook m1b
+.PHONY: setup test lint format download prepare-pdfs explain-config check-gpu index eval ablation models summarize notebook m1b m2 converse
 
 setup:
 	uv sync --extra ml
@@ -53,6 +53,16 @@ m1b:  ## every M1b ablation vs baseline, m1b_semantic_best and m1b_best, then ju
 	uv run paperlens eval --config experiments/configs/m1b_best.yaml
 	uv run paperlens judge
 	uv run paperlens summarize --out evals/results/SUMMARY.md
+
+m2:  ## M2: corpus_rag floor and the LangGraph agent over the conversations, judge, summary (~1 h GPU)
+	uv run --extra ml paperlens eval --config experiments/configs/m2_corpus_rag.yaml
+	uv run --extra ml paperlens eval --config experiments/configs/m2_agent.yaml
+	uv run paperlens judge --run m2_corpus_rag
+	uv run paperlens judge --run m2_agent
+	uv run paperlens summarize --out evals/results/SUMMARY.md
+
+converse:  ## follow-up chats through the agent -> docs/m2_demo.md
+	uv run --extra ml paperlens converse --out docs/m2_demo.md
 
 summarize:
 	uv run paperlens summarize --out evals/results/SUMMARY.md
